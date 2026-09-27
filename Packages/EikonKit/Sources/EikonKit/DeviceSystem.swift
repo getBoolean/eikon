@@ -54,9 +54,11 @@ public struct LiveDeviceSystem: DeviceSystem {
 func sysctlString(_ name: String) -> String? {
     var size = 0
     guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 1 else { return nil }
-    var buffer = [CChar](repeating: 0, count: size)
+    var buffer = [UInt8](repeating: 0, count: size)
     guard sysctlbyname(name, &buffer, &size, nil, 0) == 0 else { return nil }
-    return String(cString: buffer)
+    // `size` counts the trailing NUL; drop it and anything after.
+    let bytes = buffer.prefix(while: { $0 != 0 })
+    return String(decoding: bytes, as: UTF8.self)
 }
 
 func sysctlUInt32(_ name: String) -> UInt32? {
