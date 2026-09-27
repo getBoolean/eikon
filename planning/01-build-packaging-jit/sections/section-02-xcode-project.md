@@ -251,7 +251,7 @@ Add a **Debug loop** subsection, which later JIT sections rely on:
 
 ### `.github/workflows/ci.yml` (minimal)
 
-Triggers: `push` only, which covers pushes to pull request branches (owner decision; `pull_request` would run everything twice). A `concurrency` group per ref cancels superseded runs. Top-level `permissions: contents: read`. This workflow never publishes or writes anything.
+Triggers: `push` and `pull_request` (owner decision). Both jobs skip pull requests whose head branch is in this repo, because the push already tested them, so only fork PRs run on `pull_request`. A `concurrency` group per pull request or ref cancels superseded runs. Top-level `permissions: contents: read`. This workflow never publishes or writes anything.
 
 Pin **every action by full commit SHA**, with the version tag in a trailing comment (for example `actions/checkout@<sha> # v4.x.y`). Resolve each SHA at implementation time from the action's latest release tag (for example `gh api repos/actions/checkout/git/ref/tags/<tag>`, dereferencing annotated tags to the commit).
 

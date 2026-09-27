@@ -1,12 +1,14 @@
 name: CI
 
-# Every push, including pushes to pull request branches.
+# Every push, and pull requests. A pull request from a branch in this repo
+# is already covered by its push, so the jobs run only for fork PRs.
 on:
   push:
+  pull_request:
 
-# A newer push to the same branch cancels the run it supersedes.
+# A newer push to the same branch or pull request cancels the run it supersedes.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # This workflow never publishes or writes anything.
@@ -15,6 +17,7 @@ permissions:
 
 jobs:
   scripts:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -28,6 +31,7 @@ jobs:
         run: scripts/version.sh --check
 
   build:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
