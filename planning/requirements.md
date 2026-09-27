@@ -18,6 +18,7 @@ The owner, playing their own collection of Windows games on their own jailbroken
 6. Translate game text while the game runs, into the user's language.
 7. Install as a Dopamine rootless package from the Sileo source.
 8. Install on devices that are not jailbroken: a TrollStore build (`.tipa`), and an IPA sideloaded by hand with AltStore.
+9. Sync game saves and settings across the owner's devices through their own WebDAV server.
 
 ## Games to support, in priority order
 
@@ -80,6 +81,21 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 - Shows what the current build, device, and install method can run, and why anything is unavailable.
 - Credits every third-party component, with its license, inside the app.
 
+### Cloud saves
+- Syncs through a WebDAV server the user runs and configures (for example Nextcloud or a NAS). There is no Eikon-run service, and no iCloud or CloudKit, which need an Apple developer signature that none of the install methods have.
+- Syncs, per game and keyed by the game's hash:
+  - game saves, wherever the route keeps them: save paths in the Wine prefix (such as AppData and Documents), registry keys that games save to, Kirikiri `savedata`, and Ren'Py saves
+  - the game's settings in Eikon (route, FEX overrides, controls, code page)
+  - the translation glossary (the user's corrections for recurring terms)
+- Never syncs game files.
+- Sync state uses CRDTs (conflict-free replicated data types) wherever the data allows:
+  - Settings and the glossary are CRDTs, so concurrent edits on two devices merge without asking.
+  - Each game's set of save files is tracked as a CRDT with per-file version vectors, so changes to different files merge without asking.
+  - A save file's contents are opaque and cannot be merged. Only when two devices changed the same file does the app show both versions with device and time and let the user pick. The version not picked is kept as a backup.
+  - Each device writes only its own state files on the server and merges the others', so sync does not rely on WebDAV locking.
+- Stores server credentials in the Keychain.
+- Works on every build and install method.
+
 ### Packaging
 - A Dopamine rootless deb, package id `com.getboolean.eikon`, published on the `eikon-source` Sileo repo through GitHub Pages. Only package files go there, never app source.
 - A TrollStore build (`Eikon.tipa`) and an AltStore build (`Eikon.ipa`), built from the same sources and version as the deb.
@@ -122,7 +138,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
   - Eikon is GPL-3.0-or-later. That is compatible with Wine (LGPL-2.1-or-later), FEX and Box64 (MIT), Kirikiroid2 (BSD-style), and GPL code.
   - Kirikiroid2's Kodi-derived video player may ship. Its Android-only storage code (from AmazeFileManager, GPL-3.0) is not needed on iOS.
   - Keep every upstream copyright header, and credit every component.
-- **Privacy:** game text leaves the device only through an online backend the user turned on.
+- **Privacy:** game text leaves the device only through an online backend the user turned on. Saves, settings, and the glossary leave the device only for the WebDAV server the user configured. Remote paths use game hashes, never titles.
 - **Stay on iOS:**
   - The iOS host layer is new.
   - Autorun's Horizon server, libnx, NRO packaging, and Switch drivers are not copied.
