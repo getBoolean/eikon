@@ -1,3 +1,4 @@
+import CEikonJIT
 import Foundation
 
 /// Whether Apple's Trusted Execution Monitor is on this device.
@@ -35,6 +36,31 @@ public struct ProbeOutcome: Codable, Sendable, Equatable {
     public init(kind: Kind, detail: String?) {
         self.kind = kind
         self.detail = detail
+    }
+
+    /// `PASSED` is `.passed`. Every other status is `.failed`, with the step and the signal or error number.
+    init(_ result: eikon_probe_result) {
+        switch result.status {
+        case EIKON_PROBE_PASSED:
+            self.init(kind: .passed, detail: nil)
+        case EIKON_PROBE_ALLOC_FAILED:
+            self.init(kind: .failed, detail: "alloc \(result.error)")
+        case EIKON_PROBE_REMAP_FAILED:
+            self.init(kind: .failed, detail: "remap \(result.error)")
+        case EIKON_PROBE_PROTECT_FAILED:
+            self.init(kind: .failed, detail: "protect \(result.error)")
+        case EIKON_PROBE_PROTECTION_MISMATCH:
+            self.init(kind: .failed, detail: "protection \(result.error)")
+        case EIKON_PROBE_WRONG_RESULT:
+            self.init(kind: .failed, detail: "result \(result.error)")
+        case EIKON_PROBE_SIGNAL where result.signal == 0:
+            // The guard couldn't be installed; the probe never ran.
+            self.init(kind: .failed, detail: "signal guard \(result.error)")
+        case EIKON_PROBE_SIGNAL:
+            self.init(kind: .failed, detail: "signal \(result.signal)")
+        default:
+            self.init(kind: .failed, detail: "probe \(result.error)")
+        }
     }
 }
 

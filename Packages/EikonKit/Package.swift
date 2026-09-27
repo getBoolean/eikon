@@ -10,7 +10,7 @@ let package = Package(
     targets: [
         .target(name: "CEikonJIT"),
         .target(name: "EikonKit", dependencies: ["CEikonJIT"]),
-        .testTarget(name: "EikonKitTests", dependencies: ["EikonKit"]),
+        .testTarget(name: "EikonKitTests", dependencies: ["EikonKit", "CEikonJIT"]),
     ],
     swiftLanguageModes: [.v6]
 )

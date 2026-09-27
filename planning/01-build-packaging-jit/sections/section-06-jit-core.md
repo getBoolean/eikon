@@ -325,8 +325,10 @@ Done (commit "Add the JIT policy types and JITPolicy"):
 Done by the owner (commit "Add the probe crash sentinel"):
 - `ProbeSentinel.swift` and `ProbeSentinelTests.swift`, as planned. After review, `arm()` also creates its directory if it's missing, and flushes the directory entry after the file (best effort).
 
-Not done, left for the owner:
-- the C layer (`CEikonJIT`)
-- the `ProbeOutcome(_: eikon_probe_result)` bridge
+Done by the owner (commit "Add the CEikonJIT layer and the probe bridge"):
+- `CEikonJIT.h` / `CEikonJIT.c`: `eikon_cs_flags`, `eikon_jit_probe` (the dual-mapping RW/RX probe under a signal guard; no `MAP_JIT`) and `eikon_txm_firmware_present`. `EIKON_CS_DEBUGGED` is `0x10000000`. It builds for iOS devices and the simulator.
+- `ProbeOutcome.init(_: eikon_probe_result)` in `JITTypes.swift`: `PASSED` becomes `.passed`, and every other status becomes `.failed` with a detail naming the step and the signal or error number. After review, a `SIGNAL` status with signal 0 (the guard couldn't be installed, so the probe never ran) reports the error as "signal guard" instead. `probe_previous` is sized from the signal list.
+- `JITPolicyTests.probeOutcomeMapsCResult` checks the mapping without pinning the detail text. `EikonKitTests` depends on `CEikonJIT`.
+- 14 Swift test functions pass on the simulator. The probe never runs there. The plan leaves it to be proved on a device through an Xcode debug run and device reports.
 
-The section isn't marked complete in the implementation state.
+Section 06 is complete.

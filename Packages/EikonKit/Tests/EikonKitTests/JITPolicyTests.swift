@@ -1,3 +1,4 @@
+import CEikonJIT
 import Foundation
 import Testing
 @testable import EikonKit
@@ -88,4 +89,23 @@ private let notRun = ProbeOutcome(kind: .notRun, detail: "test")
     #expect(keys?["usable"] != nil)
 
     #expect(try JSONDecoder().decode(ProbeOutcome.self, from: JSONEncoder().encode(failed)) == failed)
+}
+
+@Test func probeOutcomeMapsCResult() {
+    let passedResult = ProbeOutcome(eikon_probe_result(status: EIKON_PROBE_PASSED, signal: 0, error: 0))
+    #expect(passedResult.kind == .passed)
+
+    let failures = [
+        EIKON_PROBE_ALLOC_FAILED,
+        EIKON_PROBE_REMAP_FAILED,
+        EIKON_PROBE_PROTECT_FAILED,
+        EIKON_PROBE_PROTECTION_MISMATCH,
+        EIKON_PROBE_WRONG_RESULT,
+        EIKON_PROBE_SIGNAL,
+    ]
+    for status in failures {
+        let outcome = ProbeOutcome(eikon_probe_result(status: status, signal: 1, error: 1))
+        #expect(outcome.kind == .failed)
+        #expect(outcome.detail?.isEmpty == false)
+    }
 }
