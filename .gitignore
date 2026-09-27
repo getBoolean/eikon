@@ -10,6 +10,9 @@ build/
 dist/
 *.xcodeproj
 DerivedData/
+# SwiftPM and editor index state
+.build/
+.swiftpm/
 
 # Per-developer signing settings
 Config/Local.xcconfig

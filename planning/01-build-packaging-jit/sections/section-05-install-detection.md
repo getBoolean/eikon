@@ -168,3 +168,24 @@ public struct AppIdentity: Codable, Sendable, Equatable {
 - The four tests above pass under `make test-swift` on the simulator.
 - `detectInstallMethod(.live)` returns `.simulator` in a simulator run, with redacted evidence (no simulator UUIDs or Mac user name).
 - No Swift `Regex`, no hard-coded bundle id at run time, and no program titles anywhere in the code or tests.
+
+---
+
+## Implementation notes (as built)
+
+Files in `Packages/EikonKit/Sources/EikonKit/`: `InstallMethod.swift` (with `InstallEvidence`), `BundleEnvironment.swift`, `InstallDetection.swift` (with `redactPath`) and `AppIdentity.swift`. Tests are in `Tests/EikonKitTests/InstallDetectionTests.swift`: four test functions, seven cases in total. The section-02 smoke test was deleted.
+
+Differences from the plan, most from the code review:
+
+- `detectInstallMethod(_: some BundleEnvironment)` is generic rather than existential. `detectInstallMethod(.live)` compiles and, in a simulator run, returns `.simulator` with the Mac user name redacted.
+- **Jailbreak rule:** it checks the resolved path first, then the unresolved bundle path, so a `/var/jb` that resolves outside a `procursus` directory still counts. `basebin` is looked up under the resolved root when there is one.
+- **Redaction** covers more than the plan listed:
+  - the component directly under the preboot hash, whatever its prefix (`dopamine-XXXXXX`, palera1n's `jb-XXXXXXXX`, …), becomes `<prefix>-<id>`
+  - `.jbroot-<hex>` (RootHide)
+  - the two components after `var/folders` (a Mac running the iPad app)
+  - UUIDs, the preboot hash and `/Users/<name>`, as planned
+- **Tests:** the argument rows also pin the rule order: a TrollStore marker plus a profile is still `.trollStore`, and a jailbreak path plus a profile is still a jailbreak. The redaction test also covers a non-Dopamine rootless layout. A deliberate break of UUID redaction was confirmed to fail the redaction test.
+- **Note for sections 06 and 09:** rootful installs (`/Applications/Eikon.app`) and RootHide installs detect as `.unknown` (or `.sideloaded` with a profile). That is as planned, but the wording should allow for it.
+- `.gitignore` now also ignores `.build/` and `.swiftpm/`, the editor's SwiftPM index state.
+
+The review trail is in `../implementation/code_review/section-05-*.md`.
