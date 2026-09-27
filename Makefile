@@ -68,7 +68,7 @@ verify:
 all: check test archive package verify
 
 publish:
-	@$(call stub,11)
+	@scripts/repo/publish.sh $(ARGS)
 
 # Prebuilt libraries from the forks' GitHub releases (see third_party/README.md).
 fetch-deps:

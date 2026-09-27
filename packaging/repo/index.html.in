@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eikon source</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.5 -apple-system, system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  h1 { margin-bottom: 0.25rem; }
+  code { background: rgba(128,128,128,0.15); padding: 0.1rem 0.35rem; border-radius: 4px; }
+  .add { display: inline-block; margin: 0.5rem 0; padding: 0.5rem 0.9rem; border-radius: 8px;
+         background: #c6f54a; color: #111; text-decoration: none; font-weight: 600; }
+  ul { padding-left: 1.2rem; }
+  .muted { color: gray; }
+</style>
+</head>
+<body>
+<h1>Eikon</h1>
+<p>An early prototype that reports whether JIT is usable and shows device status.</p>
+
+<h2>Add this source in Sileo</h2>
+<p>URL: <code>@REPO_URL@</code></p>
+<p><a class="add" href="sileo://source/@REPO_URL@">Add to Sileo</a></p>
+
+<h2>Package</h2>
+<p>Version @VERSION@, released @DATE@. For iOS 15.0 or later on Dopamine (rootless).</p>
+
+<h2>Other install methods</h2>
+<p class="muted">The TrollStore build (.tipa, needs Developer Mode on iOS 16+) and the AltStore build (.ipa) are on the GitHub release, not in this source.</p>
+
+<h2>Links</h2>
+<ul>
+  <li><a href="@SOURCE_URL@">Source repository</a></li>
+  <li><a href="@RELEASE_URL@">This release</a></li>
+  <li><a href="@LICENSE_URL@">License</a></li>
+  <li><a href="@NOTICES_URL@">Third-party notices</a></li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{
+  "class": "DepictionTabView",
+  "minVersion": "0.4",
+  "tintColor": "#c6f54a",
+  "tabs": [
+    {
+      "class": "DepictionStackView",
+      "tabname": "Details",
+      "views": [
+        {
+          "class": "DepictionMarkdownView",
+          "markdown": "@DESCRIPTION@\n\nThis is an early prototype. It shows how the app was installed, whether JIT is usable, and a device report you can share. It does not run anything yet."
+        },
+        {
+          "class": "DepictionTableTextView",
+          "title": "Version",
+          "text": "@VERSION@"
+        },
+        {
+          "class": "DepictionTableTextView",
+          "title": "Released",
+          "text": "@DATE@"
+        },
+        {
+          "class": "DepictionTableTextView",
+          "title": "Compatibility",
+          "text": "iOS 15.0 or later, Dopamine (rootless)"
+        },
+        {
+          "class": "DepictionMarkdownView",
+          "markdown": "On Dopamine, JIT is enabled automatically when \"Allow JIT in Apps\" is on."
+        },
+        {
+          "class": "DepictionMarkdownView",
+          "markdown": "The TrollStore build (.tipa) is on the release page, not in this source. On iOS 16 and later it needs Developer Mode on."
+        },
+        {
+          "class": "DepictionTableButtonView",
+          "title": "Source",
+          "action": "@SOURCE_URL@"
+        },
+        {
+          "class": "DepictionTableButtonView",
+          "title": "This release",
+          "action": "@RELEASE_URL@"
+        }
+      ]
+    },
+    {
+      "class": "DepictionStackView",
+      "tabname": "Licenses",
+      "views": [
+        {
+          "class": "DepictionMarkdownView",
+          "markdown": "Licensed under GPL-3.0-or-later."
+        },
+        {
+          "class": "DepictionTableButtonView",
+          "title": "License",
+          "action": "@LICENSE_URL@"
+        },
+        {
+          "class": "DepictionTableButtonView",
+          "title": "Third-party notices",
+          "action": "@NOTICES_URL@"
+        }
+      ]
+    }
+  ]
+}

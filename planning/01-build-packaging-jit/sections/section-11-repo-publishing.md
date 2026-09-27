@@ -464,3 +464,19 @@ Add a **"One-time setup (owner-run or owner-approved)"** section listing these s
   - a `Release` whose hashes match
 - `scripts/repo/publish.sh --dry-run` runs its preflight and prints the planned actions without changing anything remote.
 - `README.md` documents publishing and the one-time setup steps.
+
+---
+
+## Implementation notes (as built)
+
+Files: `packaging/repo/{depiction.json.in,index.html.in,README.md.in,icon/{icon.png,CydiaIcon.png}}`, `scripts/repo/{build_index.py,publish.sh}`, `tests/test_build_index.py`, the Makefile `publish` target, and the README Publishing / one-time-setup sections. The icons are the app icon resized to 512×512 and 180×180, opaque.
+
+Verified: `build_index.py` run against the real `dist/` deb produces a `docs/` tree whose `depiction.json` parses, whose `index.html` renders, and whose `Release` lists Packages/Packages.xz/Packages.zst with matching hashes and sizes, with no leftover placeholders. Five pytest tests cover the Release hashes, the Packages stanza in both filename modes, a rerun replacing everything, and a failed rebuild leaving the previous docs intact. They skip without dpkg-deb or zstd. `publish.sh` preflight refuses cleanly and touches nothing.
+
+From the code review:
+- **Safe swap:** a rebuild that fails after moving the old `docs/` aside restores it, rather than losing it (the previous version was a data-loss path). Covered by the new test.
+- The Packages stanza ends with a blank line; the Description is normalised for the templates only; hashing streams the deb; `MD5Sum` is documented as decorative.
+
+Not run here (deferred to section 12, owner-approved): the first real publish, a full `publish.sh --dry-run` (it clones `eikon-source`), the `eikon-source` migration, the deploy key/environment/secret, enabling Pages, and the repo description. The README documents each.
+
+The review trail is in `../implementation/code_review/section-11-*.md`.
