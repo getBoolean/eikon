@@ -1,1 +1,5 @@
 .vscode/settings.json
+
+# Planning tool state (machine-specific)
+planning/deep_project_session.json
+planning/**/deep_plan_config.json
