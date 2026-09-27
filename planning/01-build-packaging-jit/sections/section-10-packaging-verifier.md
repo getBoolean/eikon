@@ -294,3 +294,22 @@ Add, under install methods, that:
 - `cd dist && shasum -a 256 -c SHA256SUMS` passes.
 - The one-time forbidden-key spot check made CI fail in the verify step, and the scratch branch is gone.
 - No forbidden entitlement appears in any artifact, and no program title appears in any file this section adds.
+
+---
+
+## Implementation notes (as built)
+
+Files: `scripts/{archive,package}.sh`, `scripts/verify_artifacts.py`, `packaging/entitlements/{deb,tipa,ipa}.plist` and their README, `packaging/deb/{control.in,postinst,prerm}`, the Makefile recipes, the CI build job, and the README install notes.
+
+Verified on the dev Mac: `make all` passes; `dist/` holds the ipa, tipa, deb and `SHA256SUMS`; `cd dist && shasum -a 256 -c SHA256SUMS` passes. The ipa and tipa carry `get-task-allow`; the deb does not. `EKPackageKind` is stamped per artifact. Negative checks all fail as they should, naming the artifact and the offender: a forbidden `dynamic-codesigning` in the tipa, a planted `.DS_Store`, and a deb leaking `get-task-allow`.
+
+From the code review:
+- The verifier requires each artifact's entitlement set to **equal** its plist exactly, not just contain it, so a leaked or missing per-kind key fails. `ldid -e` was confirmed to emit exactly the signed plist's keys.
+- `make package` clears `dist/` first, and `ipa`/`tipa`/`deb`/`package` depend on `archive`, so parallel make can't reorder them.
+- The deb layout check reports every path outside `var/jb/`.
+
+Open points recorded in the entitlements README: whether Dopamine honours the memory keys, and whether an AltStore free team can be granted the `kernel.*` capabilities. Both are resolved by the first installs and device reports.
+
+The archive's arm64 guard and the verifier's nested-Mach-O checks have nothing to act on in this split (a single flat app bundle); they guard the later splits that add frameworks.
+
+The review trail is in `../implementation/code_review/section-10-*.md`.

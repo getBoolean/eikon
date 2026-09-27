@@ -76,7 +76,9 @@ process handle SIGBUS SIGSEGV SIGILL SIGTRAP -s false -n false
 
 - **Dopamine rootless deb** (`com.getboolean.eikon`, `iphoneos-arm64`), installed at `/var/jb/Applications/Eikon.app`. Supported on Dopamine 2, for iOS 15.0–16.6.1.
 - **`Eikon.tipa`** for TrollStore, up to iOS 17.0. On iOS 16 and later, **Developer Mode must be on**: the `.tipa` carries `get-task-allow`, which TrollStore's enable-JIT feature needs.
-- **`Eikon.ipa`** for AltStore, on current iOS.
+- **`Eikon.ipa`** for AltStore, on current iOS. AltStore re-signs it with the developer profile's entitlements, replacing the ones in the ipa.
+
+The deb needs no Developer Mode. Each artifact carries the same binary, signed with its own entitlements (`packaging/entitlements/`); `make verify` checks that.
 
 ## JIT
 

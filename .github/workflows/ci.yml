@@ -58,6 +58,13 @@ jobs:
           echo "DEVELOPER_DIR=$best/Contents/Developer" >> "$GITHUB_ENV"
           DEVELOPER_DIR="$best/Contents/Developer" xcodebuild -version
       - name: Install tools
-        run: brew install xcodegen uv
-      - name: Swift tests and launch check
-        run: make test-swift
+        run: |
+          brew list --formula ldid >/dev/null 2>&1 && brew uninstall --ignore-dependencies ldid || true
+          brew install xcodegen ldid-procursus dpkg uv
+      - name: Build, package and verify
+        run: make test-swift archive package verify
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eikon-dist
+          path: dist/

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Unregister the app icon on removal (not on upgrade).
+set -e
+PATH="/var/jb/usr/bin:/var/jb/bin:$PATH"
+export PATH
+
+if [ "$1" = remove ]; then
+	if command -v uicache >/dev/null 2>&1; then
+		uicache -u /var/jb/Applications/Eikon.app || true
+	fi
+fi
+exit 0

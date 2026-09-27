@@ -1,0 +1,14 @@
+Package: com.getboolean.eikon
+Name: Eikon
+Version: @VERSION@
+Architecture: iphoneos-arm64
+Depends: firmware (>= 15.0)
+Section: Games
+Maintainer: getBoolean <https://github.com/getBoolean>
+Author: getBoolean
+Installed-Size: @INSTALLED_SIZE@
+Homepage: https://github.com/getBoolean/eikon
+Icon: https://getboolean.github.io/eikon-source/icon.png
+Depiction: https://getboolean.github.io/eikon-source/
+SileoDepiction: https://getboolean.github.io/eikon-source/depiction.json
+Description: An early prototype that reports whether JIT is usable and shows device status. Not a working emulator yet.
