@@ -4,7 +4,9 @@
 
 **Goal:** The original Linux sketch Signal Drift runs under FEX for more than one frame and the process exits 0. This happens on a Linux machine. The iOS app does not link FEX in this stage.
 
-**Architecture:** Submodule `third_party/FEX` at tag `FEX-2609`. The guest is `demos/linux`, built as a native x86-64 ELF, then run with FEX's normal ARM64 JIT on Linux. The earlier simulator run matched one frame and aborted on exit. This stage uses the JIT build, which is the build that can load a dynamic ELF. Wine is not involved.
+**Architecture:** Submodule `third_party/FEX` at tag `FEX-2609`. The guest is `demos/linux`, built as an x86-64 ELF, then run with FEX's normal ARM64 JIT on Linux. The binary is named `FEXInterpreter`, but it is the JIT. The earlier simulator run matched one frame and aborted on exit. Wine is not involved.
+
+The guest is built twice. The static build needs nothing from the host and is the acceptance run. The dynamic build needs an x86-64 root filesystem, set up with `FEXRootFSFetcher`. It is the check that the dynamic-ELF abort from the simulator run is gone.
 
 **Tech Stack:** FEX-Emu `FEX-2609`, CMake, a Linux ARM64 host.
 
@@ -27,7 +29,7 @@
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: an x86-64 ELF that prints `frame 1` and `frame 2` and returns 0
+- Produces: two x86-64 ELFs, `signal-drift-static` and `signal-drift`, that print `frame 1` and `frame 2` and return 0
 
 - [ ] **Step 1: Write the program**
 
@@ -41,13 +43,23 @@ int main(void) {
 }
 ```
 
-`Makefile` uses `x86_64-linux-gnu-gcc -O2 -o signal-drift signal-drift.c`.
+`Makefile` builds both:
+
+```make
+all: signal-drift signal-drift-static
+signal-drift: signal-drift.c
+	x86_64-linux-gnu-gcc -O2 -o $@ $<
+signal-drift-static: signal-drift.c
+	x86_64-linux-gnu-gcc -O2 -static -o $@ $<
+```
 
 - [ ] **Step 2: Test the source**
 
 ```python
 from pathlib import Path
-text = Path("demos/linux/signal-drift.c").read_text(encoding="utf-8")
+
+ROOT = Path(__file__).resolve().parents[1]
+text = (ROOT / "demos" / "linux" / "signal-drift.c").read_text(encoding="utf-8")
 
 def test_two_frames():
     assert 'puts("frame 1")' in text
@@ -81,16 +93,18 @@ git commit -m "Add a two-frame Signal Drift stand-in."
 ```bash
 git submodule add https://github.com/FEX-Emu/FEX third_party/FEX
 git -C third_party/FEX checkout FEX-2609
-cmake -S third_party/FEX -B build/fex -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build/fex -j4 --target FEXInterpreter
+git -C third_party/FEX submodule update --init --recursive
+cmake -S third_party/FEX -B build/fex -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build build/fex --target FEXInterpreter FEXRootFSFetcher
 ```
 
-Write those commands into `docs/build-fex.md` once they succeed. If the configure line needs an extra flag to turn the interpreter off, add that flag to the doc after the build log shows it. The acceptance run uses `FEXInterpreter`, which JITs.
+FEX builds with clang. Write the commands into `docs/build-fex.md` once they succeed, along with any flag the build log shows was needed. Do not configure the simulator build used earlier.
 
 - [ ] **Step 2: Run**
 
 ```bash
-build/fex/Bin/FEXInterpreter demos/linux/signal-drift ; echo $?
+build/fex/Bin/FEXInterpreter demos/linux/signal-drift-static ; echo $?
 ```
 
 Expected stdout:
@@ -103,6 +117,15 @@ frame 2
 Expected exit code: `0`
 
 A non-zero exit is the stage failing, including an abort during process teardown. The log of that abort is appended to `docs/build-fex.md`.
+
+Then run the dynamic build against a root filesystem:
+
+```bash
+build/fex/Bin/FEXRootFSFetcher
+build/fex/Bin/FEXInterpreter demos/linux/signal-drift ; echo $?
+```
+
+Expected: the same two lines and `0`. Record the root filesystem image name in `docs/build-fex.md`.
 
 - [ ] **Step 3: Commit**
 

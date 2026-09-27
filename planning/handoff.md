@@ -38,7 +38,7 @@ Do not recreate or push to these. They are gone:
 
 ## Engine
 
-Linux stays on FEX. Windows follows Autorun: Wine built for ARM64, with Box64 translating only the guest program. The stage split is `plans/stages.md`.
+Linux stays on FEX. Windows follows Autorun: Wine built for ARM64, with Box64 translating only the guest program. The stage split is `planning/old-stages/stages.md`.
 
 - Linux x86-64: FEX-Emu directly. Submodule `third_party/FEX` at tag `FEX-2609`. Do not run Linux guests under Box64, QEMU, or v86.
 - Windows: Wine native on ARM64. Submodule `third_party/wine` at tag `wine-11.0`. Box64 tag `v0.3.6` is the CPU backend. Wine is not run under FEX. Autorun's Horizon server and Mesa-switch drivers are not copied.
@@ -79,7 +79,7 @@ The Contents API stores the UTF-8 of the content string. Bytes above 127 get exp
 
 ## Next
 
-Implementation order is `plans/stages.md`. The `1.0.0` sizes below belong to a package that is not in this checkout. Stage 10 publishes the `0.1.0` shell instead of those bytes.
+Implementation order is `planning/old-stages/stages.md`. The `1.0.0` sizes below belong to a package that is not in this checkout. Stage 10 publishes the `0.1.0` shell instead of those bytes.
 
 1. Upload the deb, `Packages.bz2`, `Packages.gz`, and `icon.png` as real bytes. The historical sizes, for the missing package, were deb 388546, bz2 565, gz 510, png 8599.
 2. Put `.github/workflows/pages.yml` on `main`. It deploys `docs/` only after Pages is enabled. A 404 from the contents API means the token cannot write workflow files.

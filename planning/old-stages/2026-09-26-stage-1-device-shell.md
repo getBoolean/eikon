@@ -13,7 +13,7 @@
 - Said “AY-kon.” Package id `com.getboolean.eikon`. Display name `Eikon`.
 - Architecture `iphoneos-arm64`. Install root `/var/jb`. `Depends: firmware (>= 15.0)`.
 - Version of this shell is `0.1.0`. Do not reuse the handoff's `1.0.0` hashes. That deb is not in this checkout.
-- No JIT bypass and no exploit. This stage links neither Box64, Wine, nor FEX.
+- No JIT bypass and no exploit. This stage links neither Wine nor FEX.
 - Copy states that the app is not a working emulator and not a jailbreak tool.
 - Do not put Theos sources, the IPA, or `.theos` on `eikon-source`.
 - Do not name guest programs. Engine words allowed on the screen are Kirikiri, BGI, Ren'Py, GameMaker, and Unity, as later targets.
@@ -150,7 +150,6 @@ def test_screen_states_the_limits():
     assert "Not a jailbreak tool" in SOURCE
     assert "FEX-Emu" in SOURCE
     assert "Wine" in SOURCE
-    assert "Box64" in SOURCE
 
 def test_screen_names_engines_without_titles():
     for engine in ("Kirikiri", "BGI", "Ren'Py", "GameMaker", "Unity"):
@@ -240,7 +239,7 @@ int main(int argc, char *argv[]) {
     body.text =
         @"Not a working emulator.\n"
         @"Not a jailbreak tool.\n\n"
-        @"Linux guests stay on FEX-Emu. Windows guests are Wine built for this CPU, with Box64 translating only the guest.\n\n"
+        @"FEX-Emu translates x86 code for both Linux and Windows guests. Windows guests run in Wine built for this CPU, with FEX translating only the guest.\n\n"
         @"Later targets, in order: Kirikiri and BGI, then Ren'Py and GameMaker, then Unity.";
 
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[title, body]];
@@ -286,8 +285,8 @@ int main(int argc, char *argv[]) {
         <integer>1</integer>
         <integer>2</integer>
     </array>
-    <key>UILaunchStoryboardName</key>
-    <string></string>
+    <key>UILaunchScreen</key>
+    <dict/>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
@@ -298,7 +297,7 @@ int main(int argc, char *argv[]) {
 </plist>
 ```
 
-Add `Eikon_RESOURCE_FILES = Resources/Info.plist` is wrong for Theos; Theos reads `Resources/Info.plist` for an application target automatically. Do not add a second plist.
+Theos copies `Resources/Info.plist` into the application bundle automatically. Do not add `Eikon_RESOURCE_FILES` for it, and do not add a second plist. An empty `UILaunchScreen` dictionary is what lets the app fill the screen; without a launch screen iOS runs the app letterboxed.
 
 - [ ] **Step 4: Run the test and confirm it passes**
 
@@ -346,11 +345,79 @@ Expected: `Package: com.getboolean.eikon` and a path under `var/jb/Applications/
 
 ```bash
 scp packages/*_iphoneos-arm64.deb mobile@<device>:/tmp/eikon.deb
-ssh mobile@<device> 'sudo dpkg -i /tmp/eikon.deb && uiopen com.getboolean.eikon'
+ssh mobile@<device> 'sudo dpkg -i /tmp/eikon.deb && uicache -p /var/jb/Applications/Eikon.app && uiopen --bundleid com.getboolean.eikon'
 ```
+
+`uicache` registers the app with SpringBoard; without it the icon does not appear and `uiopen` fails. `sudo` needs a password set for `mobile`; `ssh root@<device>` without `sudo` also works. If this `uiopen` build names the flag differently, check `uiopen --help`.
 
 Expected: the screen shows “Not a working emulator.” and “Not a jailbreak tool.” The app does not spawn another process.
 
 - [ ] **Step 4: Commit**
 
 No source commit if the deb was the only new artifact. Do not commit `packages/` or `.theos/`. Add both to `.gitignore` if the build created them and they show up in `git status`.
+
+### Task 4: Attribution
+
+**Files:**
+- Create: `THIRD_PARTY_NOTICES.md`
+- Create: `Resources/licenses/.keep`
+- Create: `src/AcknowledgementsViewController.h`
+- Create: `src/AcknowledgementsViewController.m`
+- Modify: `src/RootViewController.m`, `Makefile`, `README.md`
+- Test: `tests/test_third_party_notices.py`
+
+**Interfaces:**
+- Consumes: Tasks 1 to 3
+- Produces: one place to credit third-party code, and a test that fails when a submodule is added without credit. Later stages that add a submodule or bundle outside files (FEX, Wine, DXVK or DXMT, MoltenVK, Kirikiroid2, fonts, translation models) add their entry here in the same commit.
+
+`THIRD_PARTY_NOTICES.md` has one `## <name>` section per component, with the project URL, the pinned tag or commit, the copyright holders, the license name, and the file name of the full text in `Resources/licenses/`. The deb installs `Resources/licenses/` into the app bundle, and the Acknowledgements screen reads them from there. The deb also installs them at `/var/jb/usr/share/doc/com.getboolean.eikon/`.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+def submodules():
+    gm = ROOT / ".gitmodules"
+    if not gm.exists():
+        return []
+    return re.findall(r"path\s*=\s*(\S+)", gm.read_text(encoding="utf-8"))
+
+def test_notices_file_exists():
+    assert (ROOT / "THIRD_PARTY_NOTICES.md").exists()
+
+def test_every_submodule_is_credited_with_a_license_file():
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    for path in submodules():
+        name = Path(path).name
+        assert f"## {name}" in notices, name
+        section = notices.split(f"## {name}", 1)[1].split("\n## ", 1)[0]
+        files = re.findall(r"Resources/licenses/(\S+?\.txt)", section)
+        assert files, name
+        for f in files:
+            assert (ROOT / "Resources" / "licenses" / f).exists(), f
+```
+
+Run: `python3 -m pytest tests/test_third_party_notices.py -v`
+
+Expected: FAIL, because the notices file is missing.
+
+- [ ] **Step 2: Add the file, the screen, and the README section**
+
+`THIRD_PARTY_NOTICES.md` starts with one line saying that Eikon includes the components below, and that each is under its own license. It has no sections yet.
+
+`AcknowledgementsViewController` lists every `.txt` in the bundle's `licenses/` folder and shows the full text when one is tapped. `RootViewController` gets an `Acknowledgements` button. The README gets a `## Credits` section that points to `THIRD_PARTY_NOTICES.md`.
+
+Run: `python3 -m pytest tests/ -v`
+
+Expected: PASS
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add THIRD_PARTY_NOTICES.md Resources/licenses src/AcknowledgementsViewController.h src/AcknowledgementsViewController.m src/RootViewController.m Makefile README.md tests/test_third_party_notices.py
+git commit -m "Add third-party notices and the Acknowledgements screen."
+```
