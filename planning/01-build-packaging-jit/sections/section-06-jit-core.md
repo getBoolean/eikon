@@ -322,8 +322,10 @@ Done (commit "Add the JIT policy types and JITPolicy"):
 - `TXMTable.swift`: `JITPolicy.txmInfo` and the CPU-family table. It is seeded only with A15 (enforced from iOS 26); unlisted families are treated as enforced on iOS 26+.
 - `JITPolicyTests.swift`: the seven policy tests from the plan. They pass under `make test-swift`.
 
+Done by the owner (commit "Add the probe crash sentinel"):
+- `ProbeSentinel.swift` and `ProbeSentinelTests.swift`, as planned. After review, `arm()` also creates its directory if it's missing, and flushes the directory entry after the file (best effort).
+
 Not done, left for the owner:
-- `ProbeSentinel.swift` and `ProbeSentinelTests.swift`
 - the C layer (`CEikonJIT`)
 - the `ProbeOutcome(_: eikon_probe_result)` bridge
 
