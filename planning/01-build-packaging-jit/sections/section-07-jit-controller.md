@@ -211,3 +211,17 @@ Later splits read `JITStatusStore.shared.current.usable` from any thread, or obs
 - `make test-swift` passes, including the five controller tests.
 - The app launches in the simulator, shows the simulator reason, and opens no URL.
 - No file in this section contains a program or game title, and nothing uses an iOS 16+ API.
+
+---
+
+## Implementation notes (as built)
+
+Files in `Packages/EikonKit/Sources/EikonKit/`: `JITClock.swift`, `SystemInfo.swift`, `JITSystem.swift`, `JITStatusStore.swift` and `JITController.swift`. Tests are in `Tests/EikonKitTests/JITControllerTests.swift`: the five behavioural tests from the plan. `App/EikonApp.swift` holds `JITController.shared`, calls `gatherFacts()` from `init`, passes the controller to the existing placeholder `StatusView` with `.environmentObject`, and forwards every `.active` scene phase.
+
+Differences from the plan:
+
+- Section 06 did not define a UserDefaults key, so the controller uses `eikon.lastTrollStoreJITAttempt`. The interval stays `JITPolicy.trollStoreCooldown` (one minute).
+- If `ProbeSentinel.arm()` throws, the probe does not run. The outcome stays `notRun`.
+- The placeholder status screen does not display the JIT reason; section 09 does. `make test-swift` passed (19 Swift tests, including the five controller tests) and the installed app stayed running in the simulator. On the simulator the install method is `.simulator`, so the policy reason is `simulator` and no TrollStore URL is opened.
+
+The review found nothing to change. The trail is in `../implementation/code_review/section-07-*.md`.
