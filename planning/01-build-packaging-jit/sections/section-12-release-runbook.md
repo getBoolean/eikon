@@ -229,3 +229,17 @@ External state changed only with owner approval: the `eikon-source` deploy key, 
 - `https://getboolean.github.io/eikon-source/` serves a valid index with only `0.1.0`, and its hashes match the release asset.
 - `device-reports/README.md` holds the runbook. Reports for each runbook case that could be run are filed and committed, and any case that couldn't be run is recorded as such.
 - Every outward-facing action was taken only after explicit owner approval.
+
+---
+
+## Implementation notes (as built)
+
+Local deliverables (done):
+- `.github/workflows/release.yml`: on a `v*` tag, the `build` job runs the tag guard (`version.sh --check-tag`) then `make all` and uploads `dist/`; the `release` job creates the GitHub Release from the artifacts and fails if it already exists (no `--clobber`); the `publish` job is gated on the `eikon-source` environment, skips cleanly when the deploy key is absent, downloads the deb from the release asset URL, verifies it against the release's `SHA256SUMS`, rebuilds the index and pushes to `eikon-source` with the deploy key. Actions are SHA-pinned; top-level permissions are read-only.
+- `device-reports/README.md`: the runbook for the iPad (TrollStore, Dopamine 3) and the iPhone (AltStore, TXM), the filing steps, the expected-results table, and the follow-ups. No titles; the privacy rule is stated.
+
+Local checks passed: `make all` on a clean tree (25 script tests); `version.sh --check-tag v0.1.0` passes and `v0.1.1` fails; `release.yml` parses with the expected structure. The review added the `SHA256SUMS` verification in the publish job.
+
+**Part C is not done here.** Every step is outward-facing (the deploy key, the `eikon-source` environment and secret, the `v0.1.0` tag and release, the environment-approved publish, enabling Pages, the repo description, running the device runbook and pushing the reports). Each needs explicit owner approval and is presented to the owner, not run automatically.
+
+The review trail is in `../implementation/code_review/section-12-*.md`.
