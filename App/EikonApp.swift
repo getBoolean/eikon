@@ -12,8 +12,7 @@ struct EikonApp: App {
 
     var body: some Scene {
         WindowGroup {
-            StatusView()
-                .environmentObject(jit)
+            StatusView(controller: jit)
                 .onChange(of: scenePhase) { phase in
                     if phase == .active {
                         jit.sceneBecameActive()

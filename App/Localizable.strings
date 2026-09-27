@@ -1,0 +1,92 @@
+/* Eikon status screen. English. The later localisation split moves this into en.lproj. */
+
+"status.title" = "Eikon";
+
+/* Section headers */
+"status.section.app" = "App";
+"status.section.install" = "Install";
+"status.section.jit" = "JIT";
+"status.section.device" = "Device";
+"status.section.report" = "Report";
+
+/* App section */
+"status.app.version" = "Version";
+"status.app.version.format" = "%1$@ (%2$@)";
+"status.app.commit" = "Commit";
+"status.app.packageKind" = "Package kind";
+"status.app.bundleId" = "Bundle ID";
+
+/* Shared values */
+"status.value.unknown" = "unknown";
+"status.value.yes" = "yes";
+"status.value.no" = "no";
+
+/* Install section */
+"install.method.label" = "Detected method";
+"install.method.dopamine" = "Dopamine";
+"install.method.rootlessJailbreak" = "rootless jailbreak";
+"install.method.trollStore" = "TrollStore";
+"install.method.trollStoreLite" = "TrollStore Lite";
+"install.method.sideloaded" = "sideloaded";
+"install.method.simulator" = "simulator";
+"install.method.unknown" = "unknown";
+
+/* JIT section */
+"jit.state.usable" = "Usable";
+"jit.state.notUsable" = "Not usable";
+"jit.pending" = "Waiting for TrollStore…";
+
+"jit.source.label" = "Source";
+"jit.source.none" = "none";
+"jit.source.dopamine" = "Dopamine";
+"jit.source.rootlessJailbreak" = "rootless jailbreak";
+"jit.source.trollStore" = "TrollStore";
+"jit.source.externalEnabler" = "external enabler";
+"jit.source.preexisting" = "already enabled at launch";
+"jit.source.unknown" = "unknown";
+
+"jit.csDebugged.label" = "CS_DEBUGGED";
+"jit.seen.atLaunch" = "at launch";
+"jit.seen.afterTrollStoreRequest" = "after TrollStore request";
+"jit.seen.onForeground" = "on returning to the app";
+
+"jit.probe.label" = "Probe";
+"jit.probe.notRun" = "not run";
+"jit.probe.passed" = "passed";
+"jit.probe.failed" = "failed";
+
+"jit.txm.label" = "TXM";
+"jit.txm.present" = "present";
+"jit.txm.absent" = "absent";
+"jit.txm.unknown" = "unknown";
+"jit.txm.enforced" = "enforced";
+"jit.txm.notEnforced" = "not enforced";
+
+"jit.retryJIT" = "Retry JIT";
+"jit.retryProbe" = "Retry probe";
+
+/* One cause-and-fix text per JITReasonCode */
+"jit.reason.dopamineJITOff" = "Dopamine didn't enable JIT for Eikon. Turn on “Allow JIT in Apps” in Dopamine's settings, make sure tweak injection isn't disabled for Eikon and the device isn't in safe mode, then relaunch Eikon. Dopamine 2.0 doesn't provide JIT; update to 2.1 or later.";
+"jit.reason.rootlessJailbreakNoJIT" = "This jailbreak didn't enable JIT for Eikon. Features that need JIT are unavailable; everything else still works.";
+"jit.reason.trollStoreRequestPending" = "Asking TrollStore to enable JIT…";
+"jit.reason.trollStoreTimedOut" = "TrollStore didn't enable JIT. Update TrollStore to 2.0.12 or later and make sure its URL scheme is enabled in TrollStore's settings, then tap Retry JIT.";
+"jit.reason.sideloadedNoJIT" = "JIT isn't enabled for this install. Features that need JIT are unavailable; everything else still works.";
+"jit.reason.txmEnforced" = "This device requires a debugger to approve JIT code. Enabling JIT with an enabler won't make it usable here yet. Native routes still work.";
+"jit.reason.txmUndetermined" = "Eikon couldn't confirm whether this device requires debugger approval for JIT, so JIT is treated as unavailable to be safe. Native routes still work. A device report helps fix this.";
+"jit.reason.probeSkippedAfterCrash" = "The last launch ended during the JIT check, so it was skipped this time. Tap Retry probe to run it again.";
+"jit.reason.probeFailed" = "JIT appears to be enabled, but a test of it failed (details below). Tap Retry probe, and please share a device report.";
+"jit.reason.unknownInstallNoJIT" = "Eikon couldn't tell how it was installed, and JIT isn't enabled. Features that need JIT are unavailable; everything else still works.";
+"jit.reason.simulator" = "JIT is never enabled in the simulator.";
+
+/* Device section */
+"device.model" = "Model identifier";
+"device.chip" = "Chip";
+"device.os" = "iOS";
+"device.os.format" = "%1$@ (%2$@)";
+"device.memory" = "Available memory";
+
+/* Report section */
+"report.copy" = "Copy report";
+"report.share" = "Share report";
+"report.copied" = "Copied";
+"report.error" = "Couldn't build the report.";

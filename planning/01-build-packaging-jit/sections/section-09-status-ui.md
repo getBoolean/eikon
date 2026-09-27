@@ -277,3 +277,19 @@ Put the preview's sample values in the preview only. Don't add test-only initial
 - `make test-swift` builds and passes. The app builds with no strict-concurrency warnings or errors from the new code.
 - Every `JITReasonCode`, `InstallMethod`, `JITSource`, `CSDebuggedSeen`, probe kind and TXM state maps through an exhaustive `switch` to a key that exists in `Localizable.strings`. The preview shows no raw keys.
 - The simulator checklist under **Tests** passes on an iPhone and an iPad simulator.
+
+---
+
+## Implementation notes (as built)
+
+Files: `App/StatusView.swift` (the screen, `StatusContent`, the row helpers, the exhaustive enum→key maps, and the `#if DEBUG` preview), `App/Localizable.strings` (69 English keys), and `App/EikonApp.swift` (now `StatusView(controller: jit)`).
+
+- Every `JITReasonCode`, `InstallMethod`, `JITSource`, `CSDebuggedSeen`, `ProbeOutcome.Kind` and `TXMState` maps through an exhaustive `switch` with no `default`, so a new case fails the build. All 69 keys used in the Swift resolve to entries in the strings file, which is bundled.
+- Identifiers and diagnostics are shown verbatim and untranslated: commit, bundle id, package kind, model identifier, OS build, probe detail, TXM basis.
+- Verified in the simulator on an iPhone and an iPad: five sections, a single full-width column on iPad, no raw keys, the `simulator` reason, source none, probe not run, TXM absent with basis "simulator", and neither Retry button. `make test-swift` passes (21 EikonKitTests).
+- Available memory shows "Zero KB" in the simulator, because `os_proc_available_memory()` returns 0 there. It reports real values on a device.
+- Review fixes: a private `ShareItem` wrapper replaced a retroactive `URL: Identifiable`; the "Copied" reset became a cancellable Task; the probe-failed preview state was made consistent; the memory cast uses `Int64(clamping:)`.
+
+Device JIT states (TrollStore pending→usable, `trollStoreTimedOut` with Retry JIT, `dopamineJITOff`, `txmEnforced`) are checked by the section 12 runbook and filed device reports.
+
+The review trail is in `../implementation/code_review/section-09-*.md`.
