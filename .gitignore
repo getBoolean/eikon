@@ -3,3 +3,17 @@
 # Planning tool state (machine-specific)
 planning/deep_project_session.json
 planning/**/deep_plan_config.json
+planning/**/deep_implement_config.json
+
+# Build output (generated, never committed)
+build/
+dist/
+*.xcodeproj
+DerivedData/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+
+.DS_Store

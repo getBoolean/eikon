@@ -1,0 +1,15 @@
+[project]
+name = "eikon-scripts"
+version = "0.1.0"
+description = "Build, packaging and repository scripts for Eikon."
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -101,6 +101,8 @@ def git_repo(tmp_path) -> "GitRepo":
 
 Also provide a helper that runs a repo script (for example `scripts/version.sh`) by its absolute path in the Eikon checkout, with the working directory set to the fixture repo, and returns the completed process. Tests assert on exit status, not on output text.
 
+**As built:** everything is a fixture, so tests never import from `conftest`: `git_repo`, `make_repo(name)` (a factory for extra repos, such as a clone origin) and `run_script(script, *args, cwd=, env=None)`. Every git command and script under test runs with `GIT_CONFIG_GLOBAL=/dev/null` and `GIT_CONFIG_NOSYSTEM=1`, so the user's own git config (hooks, templates, signing) is neither read nor changed.
+
 ### `tests/test_version.py`: version guard
 
 Three behavioral tests, each run against a temporary git repo:
@@ -278,3 +280,24 @@ Don't name any enabler app in UI-facing wording, and don't mention any program o
 5. Each stub target exits non-zero and names the section that implements it.
 6. `make clean` removes `build/` and `dist/`.
 7. `git status` shows no generated files after a build (`build/`, `dist/`, `.venv/` and caches are ignored), and `uv.lock` is committed.
+
+---
+
+## Implementation notes (as built)
+
+Files: `VERSION`, `LICENSE`, `licenses/GPL-3.0-or-later.txt` (both the unmodified gnu.org text), `.gitignore`, `README.md`, `.python-version`, `pyproject.toml`, `uv.lock`, `Makefile`, `scripts/{version,doctor,bootstrap}.sh`, `tests/{conftest,test_version}.py`. There are three tests, as planned.
+
+Deviations, and choices the plan left open:
+
+- **`archive` has no `project` prerequisite yet.** With it, `make archive` failed on the section-02 `project` stub and named the wrong section. Section 10 adds the prerequisite along with the real recipe.
+- **`test-swift`** fails as a section-02 stub once `project.yml` exists. Section 02 replaces the whole `if` block.
+- **`.gitignore`** also ignores `planning/**/deep_implement_config.json`, the implementation tool's machine-specific state.
+- **`version.sh`:**
+  - An empty `EIKON_BUILD_NUMBER` counts as unset, because CI can export empty strings.
+  - `VERSION` is trimmed at its ends only. Inner whitespace, or a second non-empty line, fails validation.
+  - A git error while listing tags or checking for changes fails the script instead of passing silently or adding `-dirty`.
+  - The generated file is mode 644.
+- **`bootstrap.sh`** decides whether to install `ldid-procursus` with `brew list --formula ldid-procursus`, so a different `ldid` on PATH can't stand in for it.
+- **`doctor.sh`** matches `-M` only as a separate option word. When uv is missing, it prints a warning line for Python.
+
+The review trail is in `../implementation/code_review/section-01-*.md`.
