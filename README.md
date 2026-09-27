@@ -1,17 +1,14 @@
 # Eikon
 
-Eikon is the name. From Greek *eikon*, a likeness: a Windows or Linux game, shown on iPhone or iPad.
+Eikon is the app. This is where it is developed.
 
-This repo is the Dopamine package sketch and the future Sileo source. It is not a working emulator. It is not a live Sileo source. GitHub Pages is not on. Nothing here runs a game on a device.
+From Greek *eikon*, a likeness: a Windows or Linux game, shown on iPhone or iPad. Said “AY-kon.”
 
-Intended Sileo URL, once Pages is turned on later:
+This is an unfinished prototype, not a working emulator. Nothing here runs a game on a device. FEX-Emu and Wine are the intended stack and are not built into an app yet.
 
-```
-https://getboolean.github.io/eikon
-```
+The Sileo source is a separate repo: https://github.com/getBoolean/eikon-source
+That repo is not a live source. The intended URL, later, is https://getboolean.github.io/eikon-source
 
-Package id, when the sketch is renamed: `com.getboolean.eikon`.
-
-The emulation experiment is separate: https://github.com/getBoolean/jailbreak
+Package id for the Dopamine sketch: `com.getboolean.eikon`.
 
 There is no JIT bypass and no exploit. If a later build needs JIT, that comes from TrollStore, AltStore, or a device already running Dopamine.
