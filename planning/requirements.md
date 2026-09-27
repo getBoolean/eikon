@@ -42,6 +42,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
   - on Dopamine, using what Dopamine provides, with no setup or extra tool for the user
   - on TrollStore, through TrollStore's "launch with JIT" URL scheme (`apple-magnifier://enable-jit?bundle-id=<id>`, TrollStore 2.0.12 and later), the way UTM and PojavLauncher do. It does not use the `dynamic-codesigning` entitlement: iOS 15 and later on A12 and newer chips ban it, and apps signed with it crash on launch.
   - on AltStore it never requests JIT. It uses JIT if a JIT enabler such as StikDebug has given it to the process.
+  - inside **LiveContainer** (a guest app run by LiveContainer, installed via AltStore/SideStore/TrollStore), it uses whatever JIT LiveContainer's own source provides, the same as any sideloaded install. LiveContainer runs the guest under its own process, so the runtime bundle id and bundle path differ from a normal install; the app reads the bundle id at run time and never assumes `com.getboolean.eikon`. Explicit detection of LiveContainer (a dedicated install method and JIT source) is a possible follow-up once a device report shows how it maps the guest bundle. (Added 2026-09-27.)
 - **With JIT:** FEX-Emu is the x86 translator, for both Windows and Linux games.
 - **Without JIT:** the app runs:
   - the native engines (Kirikiri and Ren'Py)

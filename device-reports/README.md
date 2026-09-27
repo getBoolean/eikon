@@ -43,6 +43,24 @@ If Dopamine 3 can't run on this device, write that down; the deb is then desktop
 3. Launch. Expect **not usable**, reason `txmEnforced`, with or without an external JIT enabler — this device has Apple's Trusted Execution Monitor.
 4. File the report.
 
+## LiveContainer (exploratory — either device)
+
+Eikon has no explicit LiveContainer support yet. Running it as a guest inside
+LiveContainer is expected to detect as `sideloaded` or `unknown`, and — if
+LiveContainer (via SideStore/JITStreamer, or a TrollStore-installed
+LiveContainer) has granted JIT — to report JIT `usable` with source
+`externalEnabler` or `preexisting`. On the A15 / iOS 27 device, TXM should keep
+JIT `not usable` (`txmEnforced`) regardless. This case is to find out the ground
+truth, not to confirm a fixed expectation.
+
+1. Install LiveContainer (via AltStore, SideStore, or TrollStore) and load `Eikon-0.1.0.ipa` into it as a guest app.
+2. If you use a JIT source with LiveContainer (SideStore/JITStreamer, or its TrollStore JIT), enable it for the guest, then launch Eikon inside LiveContainer.
+3. File the report, and record in the notes:
+   - the **Detected method** and the **Bundle ID** shown on the status screen (LiveContainer may run the guest under its own id)
+   - whether JIT is **usable**, and the **source** and **CS_DEBUGGED** rows
+   - the redacted **bundle path** and **home directory** in the report's evidence (these show how LiveContainer maps the guest)
+4. If JIT is usable but the source says `externalEnabler`/`preexisting` rather than naming LiveContainer, that's expected for now — the report tells us whether a dedicated `liveContainer` install method and JIT source are worth adding.
+
 ## Filing
 
 1. Export the report from the app (**Share report**, or **Copy report** and paste into a file).
@@ -58,6 +76,7 @@ If Dopamine 3 can't run on this device, write that down; the deb is then desktop
 | iPad M2, 17.0 | Dopamine 3 | usable | `dopamine` |
 | iPad M2, 17.0 | Dopamine 3, JIT off | not usable | `dopamineJITOff` |
 | iPhone A15, 27.0 | AltStore | not usable | `txmEnforced` |
+| either | LiveContainer | exploratory | `sideloaded`/`unknown`; JIT per LiveContainer's source |
 
 ## Follow-ups from what the reports show
 
