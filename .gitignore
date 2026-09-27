@@ -11,6 +11,9 @@ dist/
 *.xcodeproj
 DerivedData/
 
+# Per-developer signing settings
+Config/Local.xcconfig
+
 # Python
 .venv/
 __pycache__/

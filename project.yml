@@ -1,0 +1,39 @@
+name: Eikon
+options:
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+  # Only project-level presets: target presets would override the xcconfigs.
+  settingPresets: project
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+packages:
+  EikonKit:
+    path: Packages/EikonKit
+targets:
+  Eikon:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Config/Debug.xcconfig
+      Release: Config/Release.xcconfig
+    sources:
+      - path: App
+    dependencies:
+      - package: EikonKit
+        product: EikonKit
+    # No preBuildScripts or postBuildScripts: nothing runs in a build phase.
+schemes:
+  Eikon:
+    build:
+      targets:
+        Eikon: all
+    test:
+      config: Debug
+      targets:
+        - package: EikonKit/EikonKitTests
+    run:
+      config: Debug
+    archive:
+      config: Release

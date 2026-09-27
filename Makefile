@@ -33,8 +33,9 @@ generated: version
 		echo "generated: skipping acknowledgements, scripts/credits.py not added yet (section 04)"; \
 	fi
 
-project: generated
-	@$(call stub,02)
+# Section 04 inserts the acknowledgements step (generated) before xcodegen.
+project: version
+	@xcodegen generate --quiet
 
 check:
 	@if [ -f scripts/credits.py ]; then \
@@ -46,12 +47,8 @@ check:
 
 test: test-swift test-scripts
 
-test-swift:
-	@if [ -f project.yml ]; then \
-		$(call stub,02); \
-	else \
-		echo "test-swift: skipping, project.yml not added yet (section 02)"; \
-	fi
+test-swift: project
+	@scripts/test_swift.sh
 
 test-scripts:
 	@uv run pytest tests/

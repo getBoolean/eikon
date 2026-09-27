@@ -1,0 +1,55 @@
+name: CI
+
+# Every push, including pushes to pull request branches.
+on:
+  push:
+
+# A newer push to the same branch cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# This workflow never publishes or writes anything.
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # version.sh counts commits and refuses a shallow clone.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Script tests
+        run: uv run pytest tests/
+      - name: Version check
+        run: scripts/version.sh --check
+
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Select the newest Xcode
+        run: |
+          best=""
+          best_version=""
+          for app in /Applications/Xcode*.app; do
+            [ -d "$app" ] || continue
+            version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist" 2>/dev/null) || continue
+            if [ -z "$best" ] || [ "$(printf '%s\n%s\n' "$best_version" "$version" | sort -V | tail -n 1)" = "$version" ]; then
+              best=$app
+              best_version=$version
+            fi
+          done
+          [ -n "$best" ] || { echo "No Xcode found in /Applications" >&2; exit 1; }
+          echo "DEVELOPER_DIR=$best/Contents/Developer" >> "$GITHUB_ENV"
+          DEVELOPER_DIR="$best/Contents/Developer" xcodebuild -version
+      - name: Install tools
+        run: brew install xcodegen uv
+      - name: Swift tests and launch check
+        run: make test-swift

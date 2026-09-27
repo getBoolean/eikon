@@ -150,7 +150,7 @@ schemes:
     build:
       targets: { Eikon: all }
     test:
-      testTargets:
+      targets:            # XcodeGen's key is `targets`; `testTargets` is silently ignored
         - package: EikonKit/EikonKitTests
     run:
       config: Debug
@@ -251,7 +251,7 @@ Add a **Debug loop** subsection, which later JIT sections rely on:
 
 ### `.github/workflows/ci.yml` (minimal)
 
-Triggers: `push` and `pull_request`. Top-level `permissions: contents: read`. This workflow never publishes or writes anything.
+Triggers: `push` only, which covers pushes to pull request branches (owner decision; `pull_request` would run everything twice). A `concurrency` group per ref cancels superseded runs. Top-level `permissions: contents: read`. This workflow never publishes or writes anything.
 
 Pin **every action by full commit SHA**, with the version tag in a trailing comment (for example `actions/checkout@<sha> # v4.x.y`). Resolve each SHA at implementation time from the action's latest release tag (for example `gh api repos/actions/checkout/git/ref/tags/<tag>`, dereferencing annotated tags to the commit).
 
@@ -265,7 +265,7 @@ Every checkout uses `fetch-depth: 0`, because `version.sh` counts commits and fa
 
 Section 04 adds `uv run scripts/credits.py check` here.
 
-**Job `build`** (`runs-on: macos-latest`):
+**Job `build`** (`runs-on: macos-latest`, `timeout-minutes: 45`):
 1. Checkout.
 2. Select the newest installed Xcode: find the `/Applications/Xcode*.app` bundles, pick the highest version, and write `DEVELOPER_DIR=<app>/Contents/Developer` to `$GITHUB_ENV`. Print `xcodebuild -version` for the log. The runner's Xcode may lag Xcode 27, which is fine: iOS 15 is a valid target for Xcode 16 and later.
 3. `brew install xcodegen uv`. Section 10 adds `ldid-procursus` and `dpkg`.
@@ -282,3 +282,24 @@ Committing the workflow is fine. **Pushing it** to GitHub, and so running it for
 - Opening `Eikon.xcodeproj` in Xcode before `make version` has ever run still builds, using the fallback values.
 - The repo has no `.xcodeproj`, no build-phase scripts, no `PrivacyInfo.xcprivacy` and no entitlements file for the app target.
 - `ci.yml` has SHA-pinned actions, read-only permissions and `fetch-depth: 0`. Once the owner approves the push, both jobs pass.
+
+---
+
+## Implementation notes (as built)
+
+All files in the table were created as planned. `make test-swift` passes locally: the smoke test runs, and the app launches and stays running on the newest iPhone simulator (iOS 27.0 at the time). The placeholder screen shows the version, build, commit, `development` and the bundle id. A build without `build/generated/` uses the fallback values.
+
+Deviations, and choices the plan left open:
+
+- **`project.yml`:**
+  - `options.settingPresets: project`, with the same xcconfigs as target-level `configFiles`. XcodeGen's target presets would otherwise write settings into the target that override the xcconfigs. The generated target sets only `INFOPLIST_FILE`.
+  - `Base.xcconfig` restates `LD_RUNPATH_SEARCH_PATHS = @executable_path/Frameworks`, which the target preset used to supply. Section 10 should confirm the archive needs nothing else from the presets, such as `CODE_SIGN_IDENTITY`.
+  - The scheme's test list uses XcodeGen's `targets:` key.
+- **`scripts/test_swift.sh`:**
+  - The launch check requires a `UIKitApplication:<bundle id>[…` launchd job with a numeric PID. It captures the `launchctl list` output before matching, so `pipefail` can't cause a false failure.
+  - `EIKON_SIM_DESTINATION` must contain `id=<udid>` of a simulator that simctl knows. The launch check is never skipped.
+  - Only the "already booted" error from `simctl boot` is tolerated.
+- **`scripts/bootstrap.sh`** (owner decisions): runs `brew update`, installs the missing formulas, and runs `brew upgrade` on the Eikon formulas Homebrew already manages. `ldid-procursus` is judged by its formula only. The upgrade path has not been exercised yet; the install path ran once.
+- **CI:** actions are pinned to `actions/checkout` v7.0.1 and `astral-sh/setup-uv` v10.2.0. The workflow is committed but **not pushed**; pushing it needs owner approval.
+
+The review trail is in `../implementation/code_review/section-02-*.md`.
