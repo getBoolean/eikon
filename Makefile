@@ -70,8 +70,11 @@ all: check test archive package verify
 publish:
 	@$(call stub,11)
 
-apply-patches unpatch:
-	@$(call stub,03)
+apply-patches:
+	@uv run scripts/apply_patches.py apply
+
+unpatch:
+	@uv run scripts/apply_patches.py restore
 
 clean:
 	rm -rf build dist

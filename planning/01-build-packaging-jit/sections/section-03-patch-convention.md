@@ -150,3 +150,26 @@ Both must succeed in split 01 as no-ops (there is no `.gitmodules`). Mark them `
 - `make apply-patches` and `make unpatch` run successfully in the real repo (no submodules yet).
 - `third_party/README.md` documents the convention and the cross-compile notes above.
 - `patches/` exists in git via `patches/.gitkeep`.
+
+---
+
+## Implementation notes (as built)
+
+Files: `third_party/README.md`, `patches/.gitkeep`, `scripts/apply_patches.py`, `tests/test_apply_patches.py`, and the `apply-patches` and `unpatch` Makefile targets. There are four tests, as planned. `tests/conftest.py`'s `run_script` fixture now runs `.py` scripts with the test interpreter.
+
+The tool is stricter than the plan in these ways (from the code review):
+
+- It removes `GIT_DIR`, `GIT_WORK_TREE` and the related variables from git's environment, so running it from a hook can't reset or clean the superproject.
+- The default root is the script's own repo, falling back to the current directory.
+- Before resetting, it checks that each submodule path is really the submodule's own checkout.
+- If fetching the pinned SHA fails, it falls back to a plain fetch of origin.
+- It fails on:
+  - a malformed `.gitmodules`
+  - a submodule path other than `third_party/<name>`
+  - duplicate component names
+  - a file in `patches/<name>/` that isn't a `.patch`
+- If the recovery reset also fails, both errors are reported.
+
+In the test fixture, the submodule is checked out at a later upstream commit before each test. That proves `apply` and `restore` follow the gitlink.
+
+The review trail is in `../implementation/code_review/section-03-*.md`.

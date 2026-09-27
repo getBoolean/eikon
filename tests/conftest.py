@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -89,11 +90,15 @@ def git_repo(make_repo: Callable[[str], GitRepo]) -> GitRepo:
 def run_script() -> Callable[..., subprocess.CompletedProcess[str]]:
     """run_script(script, *args, cwd=..., env=None) runs a script from the Eikon
     checkout (for example "scripts/version.sh") with its working directory set
-    to `cwd`, under the same isolated git environment as the fixture repos."""
+    to `cwd`, under the same isolated git environment as the fixture repos.
+    Python scripts run with the test interpreter, as `uv run` would."""
 
     def run(script: str, *args: str, cwd: Path, env: dict[str, str] | None = None):
+        command = [str(REPO_ROOT / script)]
+        if script.endswith(".py"):
+            command.insert(0, sys.executable)
         return subprocess.run(
-            [str(REPO_ROOT / script), *args],
+            [*command, *args],
             cwd=cwd,
             env=_env(env),
             capture_output=True,
