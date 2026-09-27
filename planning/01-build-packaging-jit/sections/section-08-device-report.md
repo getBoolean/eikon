@@ -317,3 +317,17 @@ uv run scripts/file_device_report.py [--out-dir DIR] [--check] <path | ->
 - `make test-swift` passes the round-trip/privacy test and the fixture contract test on the simulator.
 - In a simulator build, `DeviceReport.make(..., system: LiveDeviceSystem.current(), ...)` produces JSON that `uv run scripts/file_device_report.py --check -` accepts. Check this once by hand, by printing the encoded report in a debug run and piping it in. Section 09's Copy report button makes this easier later.
 - No file added by this section contains a device name, UDID, serial, or program title.
+
+---
+
+## Implementation notes (as built)
+
+The files are the ones in the table above. `SystemInfo.cpuFamily` now calls `sysctlUInt32` from `DeviceSystem.swift`, so there is one sysctl helper.
+
+`JITStatus` encodes a nil `reason` with `encodeIfPresent`, so the key is omitted. The previous `encode` wrote `null`, and the fixture key-set test failed until that changed. Decoding already used `decodeIfPresent`.
+
+A simulator `DeviceReport.make(..., system: LiveDeviceSystem.current(), ...)` was accepted by `scripts/file_device_report.py --check`. On this machine the model was `iPhone18,4` and the chip was `unknown` (not in the table yet). The two named test devices, `iPhone14,4` and `iPad14,5` / `iPad14,6`, are in the table.
+
+`make test-scripts` passed (20 tests). `make test-swift` passed, including the round-trip/privacy test and the fixture contract, and the app stayed running in the simulator.
+
+The review found nothing to change. The trail is in `../implementation/code_review/section-08-*.md`.

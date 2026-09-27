@@ -1,0 +1,42 @@
+{
+  "app": {
+    "build": "12",
+    "bundleIdentifier": "com.getboolean.eikon",
+    "commit": "0123abc",
+    "packageKind": "tipa",
+    "version": "0.1.0"
+  },
+  "device": {
+    "chip": "M2",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPad14,5"
+  },
+  "gates": {
+    "fixtureGate": {
+      "detail": "fixture entry",
+      "measuredAt": "2026-01-15T10:20:30Z",
+      "passed": true
+    }
+  },
+  "generatedAt": "2026-01-15T10:20:30Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": ["_TrollStore"]
+    },
+    "method": "trollStore"
+  },
+  "jit": {
+    "csDebugged": true,
+    "csDebuggedSeen": "afterTrollStoreRequest",
+    "probe": { "kind": "passed" },
+    "source": "trollStore",
+    "txm": { "basis": "os below 26", "enforced": false, "state": "absent" },
+    "usable": true
+  },
+  "memory": { "availableBytes": 5368709120 },
+  "notes": "Fixture report used by the test suites.",
+  "os": { "build": "21A329", "name": "iPadOS", "version": "17.0" },
+  "schemaVersion": 1
+}

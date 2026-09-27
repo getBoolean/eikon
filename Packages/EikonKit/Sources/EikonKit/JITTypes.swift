@@ -122,7 +122,7 @@ public struct JITStatus: Codable, Sendable, Equatable {
         try c.encode(txm, forKey: .txm)
         try c.encode(probe, forKey: .probe)
         try c.encode(source, forKey: .source)
-        try c.encode(reason, forKey: .reason)
+        try c.encodeIfPresent(reason, forKey: .reason)
         try c.encode(usable, forKey: .usable)
     }
 }

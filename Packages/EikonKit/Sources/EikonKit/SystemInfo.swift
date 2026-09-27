@@ -1,4 +1,3 @@
-import Darwin
 import Foundation
 
 /// Host facts reused by the JIT controller and, later, the device report.
@@ -9,10 +8,7 @@ public enum SystemInfo {
 
     /// `hw.cpufamily`, or 0 when the sysctl fails.
     public static var cpuFamily: UInt32 {
-        var value: UInt32 = 0
-        var size = MemoryLayout<UInt32>.size
-        guard sysctlbyname("hw.cpufamily", &value, &size, nil, 0) == 0 else { return 0 }
-        return value
+        sysctlUInt32("hw.cpufamily") ?? 0
     }
 
     public static var isSimulator: Bool {

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Eikon device report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "app",
+    "device",
+    "os",
+    "install",
+    "jit",
+    "memory",
+    "gates"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "generatedAt": { "$ref": "#/$defs/Timestamp" },
+    "app": { "$ref": "#/$defs/App" },
+    "device": { "$ref": "#/$defs/Device" },
+    "os": { "$ref": "#/$defs/OS" },
+    "install": { "$ref": "#/$defs/Install" },
+    "jit": { "$ref": "#/$defs/JIT" },
+    "memory": { "$ref": "#/$defs/Memory" },
+    "gates": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/GateResult" }
+    },
+    "notes": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "Timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+    },
+    "FilenamePart": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9,._-]+$"
+    },
+    "App": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "build", "commit", "packageKind", "bundleIdentifier"],
+      "properties": {
+        "version": { "type": "string" },
+        "build": { "type": "string" },
+        "commit": { "type": "string" },
+        "packageKind": { "type": "string" },
+        "bundleIdentifier": { "type": "string" }
+      }
+    },
+    "Device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelIdentifier", "chip", "cpuFamily"],
+      "properties": {
+        "modelIdentifier": { "$ref": "#/$defs/FilenamePart" },
+        "chip": { "type": "string" },
+        "cpuFamily": { "type": "string" }
+      }
+    },
+    "OS": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "build"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "build": { "type": "string" }
+      }
+    },
+    "Install": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "evidence"],
+      "properties": {
+        "method": { "$ref": "#/$defs/FilenamePart" },
+        "evidence": { "$ref": "#/$defs/Evidence" }
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundlePath", "homeDirectory", "markers"],
+      "properties": {
+        "bundlePath": { "type": "string" },
+        "homeDirectory": { "type": "string" },
+        "markers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "JIT": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["csDebugged", "csDebuggedSeen", "txm", "probe", "source", "usable"],
+      "properties": {
+        "csDebugged": { "type": "boolean" },
+        "csDebuggedSeen": { "type": "string" },
+        "txm": { "$ref": "#/$defs/TXM" },
+        "probe": { "$ref": "#/$defs/Probe" },
+        "source": { "type": "string" },
+        "reason": { "type": ["string", "null"] },
+        "usable": { "type": "boolean" }
+      }
+    },
+    "TXM": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "enforced", "basis"],
+      "properties": {
+        "state": { "type": "string" },
+        "enforced": { "type": "boolean" },
+        "basis": { "type": "string" }
+      }
+    },
+    "Probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string" },
+        "detail": { "type": ["string", "null"] }
+      }
+    },
+    "Memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availableBytes"],
+      "properties": {
+        "availableBytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "GateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["detail", "measuredAt"],
+      "properties": {
+        "passed": { "type": ["boolean", "null"] },
+        "detail": { "type": "string" },
+        "measuredAt": { "$ref": "#/$defs/Timestamp" }
+      }
+    }
+  }
+}
