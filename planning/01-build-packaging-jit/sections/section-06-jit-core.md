@@ -311,3 +311,20 @@ public struct ProbeSentinel: Sendable {
 - `CEikonJIT` builds for device and simulator. The header exposes the three functions and the result types, and `EikonKit` imports it.
 - The `JITPolicy` and `ProbeSentinel` tests above pass under `make test-swift`.
 - Nothing in this section calls a URL, touches UI, attaches a debugger, uses `ptrace`, task-for-pid or `MAP_JIT`, or names any program title.
+
+---
+
+## Implementation status (partial)
+
+Done (commit "Add the JIT policy types and JITPolicy"):
+- `JITTypes.swift`: `TXMState`, `CSDebuggedSeen`, `JITSource`, `JITReasonCode`, `ProbeOutcome`, `TXMInfo`, `TrollStoreRequestState`, `JITStatus` (encodes `usable`, recomputes it on decode) and `JITFacts`.
+- `JITPolicy.swift`: `mayProbe`, `status`, `shouldRequestTrollStoreJIT` and the cooldown.
+- `TXMTable.swift`: `JITPolicy.txmInfo` and the CPU-family table. It is seeded only with A15 (enforced from iOS 26); unlisted families are treated as enforced on iOS 26+.
+- `JITPolicyTests.swift`: the seven policy tests from the plan. They pass under `make test-swift`.
+
+Not done, left for the owner:
+- `ProbeSentinel.swift` and `ProbeSentinelTests.swift`
+- the C layer (`CEikonJIT`)
+- the `ProbeOutcome(_: eikon_probe_result)` bridge
+
+The section isn't marked complete in the implementation state.
