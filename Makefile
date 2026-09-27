@@ -26,23 +26,18 @@ bootstrap:
 version:
 	@scripts/version.sh
 
-generated: version
-	@if [ -f scripts/credits.py ]; then \
-		uv run scripts/credits.py app-json build/generated/Acknowledgements.json; \
-	else \
-		echo "generated: skipping acknowledgements, scripts/credits.py not added yet (section 04)"; \
-	fi
+ACKNOWLEDGEMENTS := build/generated/Acknowledgements.json
 
-# Section 04 inserts the acknowledgements step (generated) before xcodegen.
-project: version
-	@xcodegen generate --quiet
+generated: version
+	@uv run scripts/credits.py app-json $(ACKNOWLEDGEMENTS)
+
+# The app bundles the generated acknowledgements; project.yml takes the path
+# from the environment, so always generate the project through make.
+project: generated
+	@EIKON_ACKNOWLEDGEMENTS_JSON=$(ACKNOWLEDGEMENTS) xcodegen generate --quiet
 
 check:
-	@if [ -f scripts/credits.py ]; then \
-		uv run scripts/credits.py check; \
-	else \
-		echo "check: skipping credits check, scripts/credits.py not added yet (section 04)"; \
-	fi
+	@uv run scripts/credits.py check
 	@uv run scripts/deps.py check
 	@scripts/version.sh --check
 

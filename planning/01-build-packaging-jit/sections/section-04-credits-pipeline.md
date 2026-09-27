@@ -212,3 +212,35 @@ Add a short "Adding a third-party component" note next to the build instructions
 - `make check` passes on the repo, and `THIRD_PARTY_NOTICES.md` is committed and current.
 - `make generated` writes `build/generated/Acknowledgements.json` (an empty list in 01), and `make project` followed by a build bundles exactly one `Acknowledgements.json`.
 - The CI scripts job runs the credits check.
+
+---
+
+## Implementation notes (as built)
+
+**Adapted to fork releases.** After this plan was written, section 03 replaced submodules with prebuilt libraries from fork GitHub releases (`third_party/deps.toml`, owner decision). The pipeline follows that model:
+
+- A `[[component]]` entry has `name`, `dep` (the `[[dep]]` name in `deps.toml`), `url` (upstream), `license` (SPDX) and `license_files`, plus optional `[[component.nested]]` parts (`path`, `license`, `license_files`). There is no `path` or `revision`: the release comes from `deps.toml`.
+- A release asset can't be read offline, so each dependency's own license files (with their copyright lines) are committed under `third_party/notices/<dep>/`. `make check` and CI stay network-free. Nested paths are subdirectories there.
+- `check` reports:
+  - a dependency with no entry (or more than one)
+  - an entry whose `dep` isn't in `deps.toml`
+  - an empty SPDX expression or an empty `license_files`, at the top level or in a nested part
+  - a license path that is absolute or contains `..`
+  - a license file that is missing, is a symlink, or resolves outside its notices directory
+  - an SPDX id (operators matched case-insensitively) with no `licenses/<id>.txt`
+  - an orphaned `third_party/notices/<dir>`
+  - stale notices (checked only when nothing else is wrong)
+- The notices and app JSON give each component's revision as `<fork> release <tag>`. The notices name that release tag as the GPL corresponding source. Each license text in the app JSON starts with its label.
+- `pinned_commit()` doesn't exist, since there are no gitlinks. deps.py is loaded as the module `eikon_deps`.
+
+**Acknowledgements wiring.**
+- `make project` always passes `EIKON_ACKNOWLEDGEMENTS_JSON=build/generated/Acknowledgements.json`, because `generated` always writes it.
+- The section-02 placeholder `App/Resources/Acknowledgements.json` became unreachable and was deleted, along with its exclude rule.
+- A bare `xcodegen generate` fails loudly ("missing source directory …/${EIKON_ACKNOWLEDGEMENTS_JSON}"), which was checked by hand.
+- The built app has exactly one `Acknowledgements.json`, at its root.
+
+**CI.** The scripts job runs `credits.py check`. `submodules: true` isn't needed.
+
+**Tests.** `tests/test_credits.py` has five tests (six cases). They import the script through importlib under a unique module name and assert no contents, except that a path problem names the bad path. Total script tests: 15.
+
+The review trail is in `../implementation/code_review/section-04-*.md`.

@@ -40,12 +40,14 @@ Creating forks and publishing releases are outward-facing steps, so they need th
 
 ## Credits in the same commit
 
-The commit that adds a dependency also adds:
+The commit that adds or bumps a dependency also:
 
-- its credits entry in `third_party/credits.toml`
-- its license texts under `licenses/`
+- adds or updates its entry in `third_party/credits.toml`
+- copies its license files, with their copyright lines, from the fork into `third_party/notices/<name>/`. Keep them current when the release changes.
+- adds any missing `licenses/<SPDX-id>.txt`
+- regenerates `THIRD_PARTY_NOTICES.md` with `uv run scripts/credits.py notices --write`
 
-CI enforces this. For GPL and LGPL libraries, the notices point to the fork's release tag as the corresponding source.
+`make check` and CI enforce all of this. Every entry needs an SPDX expression and at least one license file. For GPL and LGPL libraries, the notices point to the fork's release tag as the corresponding source.
 
 ## Notes for building the libraries for iOS (in the forks)
 

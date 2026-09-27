@@ -29,6 +29,8 @@ jobs:
         run: uv run pytest tests/
       - name: Dependency manifest check
         run: uv run scripts/deps.py check
+      - name: Credits check
+        run: uv run scripts/credits.py check
       - name: Version check
         run: scripts/version.sh --check
 

@@ -47,6 +47,19 @@ The main targets:
 
 `make test-swift` runs the Swift tests, then installs and launches the app on the newest iPhone simulator. To pick a different simulator, set `EIKON_SIM_DESTINATION` to an `xcodebuild -destination` value.
 
+Always generate the project with `make project`. It chooses which acknowledgements file the app bundles, so a bare `xcodegen generate` isn't supported.
+
+### Adding a third-party library
+
+Libraries come prebuilt from GitHub releases of forks; see `third_party/README.md`. In one commit:
+
+1. Pin the release with `make pin-dep NAME=<name> TAG=<tag>`.
+2. Add its entry to `third_party/credits.toml`, and copy its license files into `third_party/notices/<name>/`.
+3. Add any missing `licenses/<SPDX-id>.txt`.
+4. Run `uv run scripts/credits.py notices --write`.
+
+`make check` must pass.
+
 For debug runs on a device, create `Config/Local.xcconfig` (untracked) containing `DEVELOPMENT_TEAM = <your team id>`.
 
 ### Debug loop

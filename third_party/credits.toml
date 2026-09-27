@@ -1,0 +1,18 @@
+# Credits for every dependency in third_party/deps.toml. See third_party/README.md.
+# `uv run scripts/credits.py check` (part of `make check`) enforces that each
+# dependency has exactly one entry, that its license files exist, and that
+# THIRD_PARTY_NOTICES.md is current.
+#
+# [[component]]
+# name          = "FEXCore"                      # display name
+# dep           = "fexcore"                      # the [[dep]] name in deps.toml
+# url           = "https://github.com/FEX-Emu/FEX"  # upstream URL
+# license       = "MIT"                          # SPDX expression, e.g. "LGPL-2.1-or-later"
+# license_files = ["LICENSE"]                    # under third_party/notices/<dep>/, copied from the fork
+#
+# [[component.nested]]                           # optional: separately licensed parts that ship
+# path          = "External/sub"                 # a label, and a subdirectory of third_party/notices/<dep>/
+# license       = "BSD-3-Clause"
+# license_files = ["LICENSE"]                    # relative to the nested path
+#
+# Every SPDX id used needs a text in licenses/<id>.txt.

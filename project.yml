@@ -20,6 +20,10 @@ targets:
       Release: Config/Release.xcconfig
     sources:
       - path: App
+      # build/generated/Acknowledgements.json, passed in by `make project`.
+      # A bare `xcodegen generate` fails here on purpose.
+      - path: ${EIKON_ACKNOWLEDGEMENTS_JSON}
+        buildPhase: resources
     dependencies:
       - package: EikonKit
         product: EikonKit
