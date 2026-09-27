@@ -1,8 +1,8 @@
-# 13 · Linux x86-64 games (main build)
+# 13 · Linux x86-64 games (needs JIT)
 
 ## Purpose
 
-Run Linux x86-64 games on iOS through FEX's Linux front end, inside the Eikon app process, with graphics, audio, and input. Main build only. The owner sequenced this late: the collection is mostly Windows.
+Run Linux x86-64 games on iOS through FEX's Linux front end, inside the Eikon app process, with graphics, audio, and input. Available only when the process has usable JIT (one build; the route picker checks 01's JIT API). The owner sequenced this late: the collection is mostly Windows.
 
 ## Read first
 
@@ -22,7 +22,7 @@ Run Linux x86-64 games on iOS through FEX's Linux front end, inside the Eikon ap
 - **Input:** from 04, delivered as SDL/evdev-style input.
 - Implement 02's runtime interface and route-picker entry, available only with JIT.
 
-**Out:** the no-JIT build (Linux needs JIT), and Box64 (not used for Linux).
+**Out:** a no-JIT route for Linux (Linux needs JIT), and Box64 (not used for Linux).
 
 ## Needs
 

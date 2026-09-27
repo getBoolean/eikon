@@ -24,7 +24,7 @@ Give Windows games under Wine a screen, sound, and video on iOS. This includes a
 - **Memory:** survive jetsam limits. Unity needs gigabytes. Evaluate raised-memory-limit entitlements for each install method (with 01), and report memory pressure to the user.
 - Ship Wine Mono's ARM64 build (Unity uses its own runtime, but some games and tools need .NET).
 
-**Out:** text encoding and fonts (09), the text capture hooks (11), and the no-JIT build (14).
+**Out:** text encoding and fonts (09), the text capture hooks (11), and the no-JIT route (14).
 
 ## Needs
 

@@ -25,7 +25,7 @@ The repo has no app code yet. Split 01 creates the project.
 
 | # | Split | Purpose | Ends with |
 |---|---|---|---|
-| 01 | build-packaging-jit | Build system, the three builds (deb, `.tipa`, `.ipa`), signing and entitlements, automatic JIT on Dopamine and TrollStore, JIT detection, license, credits pipeline, publishing to `eikon-source` | An empty app that installs on all three methods and reports whether it has JIT |
+| 01 | build-packaging-jit | Build system, one build packaged three ways (deb, `.tipa`, `.ipa`), signing and entitlements, automatic JIT on Dopamine and TrollStore, JIT detection, license, credits pipeline, publishing to `eikon-source` | An empty app that installs on all three methods and reports whether it has JIT |
 | 02 | app-shell | Game library, import, engine detection and hashing by main executable or archive, the route picker (with its reasons), per-game settings, the capability screen, the in-app credits | The library recognizes an engine and shows a route for original test content |
 | 03 | native-kirikiri | An iOS port of Kirikiroid2 (xp3, KAG, audio, video), with a license audit, and a hand-off to Wine for games it can't run (`.tpm` plugins, encryption) | An original `.xp3` test game runs on a device |
 | 04 | input | A shared input layer: touch controls that act as mouse and keyboard, hardware keyboards, controllers, Japanese text entry | Input reaches native Kirikiri, and there's an interface ready for Wine and Linux |
@@ -37,8 +37,8 @@ The repo has no app code yet. Split 01 creates the project.
 | 10 | native-renpy | Ren'Py on iOS, runtimes matched to each game's version, detecting x86 native extensions, falling back to Wine | An original Ren'Py test game runs on a device |
 | 11 | translation | Text capture from each route (native hooks, Wine text calls, OCR), backends (online with the user's key, including Anthropic, or on the device), the glossary, the overlay | Captured test text is translated and shown over the game |
 | 12 | cloud-saves | A WebDAV client, CRDT sync state (settings and glossary as CRDTs, save-file sets with per-file version vectors, per-device state files on the server), a save-location interface that each route fills in (Wine prefix paths and registry, Kirikiri `savedata`, Ren'Py saves), a conflict prompt only for the same file changed on two devices (pick one, keep both), backups, Keychain credentials | Saves from an original test game round-trip between two devices, with a conflict resolved |
-| 13 | linux-games | The FEX Linux front end on Darwin: a Linux syscall layer, ELF loading in the app process, graphics, audio, and input for Linux games (main build only) | An original Linux x86-64 test game runs on a device |
-| 14 | nojit-box64 | The AltStore build: Box64's interpreter as the WoW64 DLL with the guest window, Wine and Box64 as signed Mach-O, JIT use when an enabler provides it | A 32-bit test program runs in the `.ipa` with no JIT |
+| 13 | linux-games | The FEX Linux front end on Darwin: a Linux syscall layer, ELF loading in the app process, graphics, audio, and input for Linux games (only with JIT) | An original Linux x86-64 test game runs on a device |
+| 14 | nojit-box64 | The no-JIT route (chosen at run time in every package): Box64's interpreter as the WoW64 DLL with the guest window, Wine and Box64 as signed Mach-O | A 32-bit test program runs in the `.ipa` with no JIT |
 
 ## Dependencies
 
@@ -76,7 +76,7 @@ The repo has no app code yet. Split 01 creates the project.
 - **Track A (device-visible first):** 01 → 02 → 03 → 04 → 10.
 - **Track B (x86):** 05 can start once 01's JIT enablement exists, and runs beside 02–04. Then 06 → 07 → 08.
 - **After both tracks:** 09 → 11 → 12.
-- **Late, by owner's choice:** 13 and 14, after the Windows main-build path works. They can run in parallel with each other.
+- **Late, by owner's choice:** 13 and 14, after the Windows JIT path works. They can run in parallel with each other.
 
 02 stores per-game settings in a CRDT-ready shape (per-field value, timestamp, device id), and 11 does the same for the glossary, so 12 can sync them without a migration. 12's save-location interface can be planned as soon as 02 exists. Each route fills it in later. It is placed late so it can cover every route and the glossary in one pass.
 

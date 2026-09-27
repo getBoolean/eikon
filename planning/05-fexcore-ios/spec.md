@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Port FEXCore (FEX-Emu, tag `FEX-2609`) to Darwin so it translates x86 code to ARM64 inside the Eikon app process on iOS, with an Apple silicon Mac as the desktop check. This is the only x86 translator in the main build, for both Windows (06, 07) and Linux (13) games. This split also measures the device gates that decide what later splits may claim on each device.
+Port FEXCore (FEX-Emu, tag `FEX-2609`) to Darwin so it translates x86 code to ARM64 inside the Eikon app process on iOS, with an Apple silicon Mac as the desktop check. This is the x86 translator whenever the process has usable JIT, for both Windows (06, 07) and Linux (13) games. This split also measures the device gates that decide what later splits may claim on each device.
 
 ## Read first
 

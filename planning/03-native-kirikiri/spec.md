@@ -35,7 +35,7 @@ Run Kirikiri games natively on iOS, with no x86 emulation, through a port of Kir
 ## Constraints to carry
 
 - Test content is original. Build an original `.xp3` test game (KAG scenario, image, sound, a save) as the acceptance fixture. Real games from `/Volumes/Games` are extra evidence only, reported by hash.
-- Must run in the no-JIT build: no generated code.
+- Must run without JIT: no generated code.
 
 ## Done when
 

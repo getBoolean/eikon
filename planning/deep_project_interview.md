@@ -107,3 +107,14 @@ Claude's reading, recorded in `requirements.md`:
 - Settings and the glossary are structured data Eikon owns, so they can be true CRDTs (for example LWW registers per setting, an add-wins map for glossary entries). Concurrent edits merge without prompting.
 - Save file contents are opaque bytes rewritten whole by the game, so they cannot be merged. The per-game *set* of save files is a CRDT with per-file version vectors: edits to different files merge automatically, and the "pick one, keep both" prompt appears only when the same file changed on two devices.
 - On WebDAV, each device writes only its own state/op-log files and merges the others', which avoids relying on WebDAV locking.
+
+## Round 6 (during /deep-plan of split 01, 2026-09-27)
+
+**Owner:** "Maybe we should combine the JIT and no-JIT builds and handle it appropriately."
+
+**Decision:** one build. The same app binary ships as the deb, the `.tipa`, and the `.ipa`, which differ only in entitlements and packaging. Routes are chosen at run time from 01's JIT API:
+- FEX when the process has usable JIT.
+- Box64's interpreter for 32-bit Windows games when it doesn't.
+- 64-bit Windows and Linux games show "needs JIT".
+
+JIT that can't be used (TXM without a debugger blessing pages) counts as no JIT. `requirements.md`, the manifest, and the 02, 03, 05, 06, 08, 13 and 14 specs were updated. Split 14 is now "the no-JIT route" and keeps its directory name. The "No-JIT build" items in the lists above now mean that route.

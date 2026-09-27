@@ -20,11 +20,11 @@ Bring Wine up on iOS inside the Eikon app process, and run a 64-bit Windows x86 
 - **Pseudo-processes:** a program that starts another program gets a pseudo-process in the same Mach process (as in Madeira). Design how handles, the address space, and PE image bases are kept apart or shared, and what a child exit or crash does.
 - **x18:** patch x18 reads in each loaded Windows ARM64/ARM64EC module into trampolines that fetch the TEB from `TPIDRRO_EL0`. Add a fault handler for reads that were missed, and have the Wine dispatcher restore x18 on entry to PE code. Measure the cost of faults.
 - `libarm64ecfex.dll` (FEX's ARM64EC DLL) built with llvm-mingw, wired to 05's FEXCore.
-- Loading Wine's own ARM64 PE DLLs needs executable mappings of unsigned code, so it needs JIT (main build). Record exactly where, for 14.
+- Loading Wine's own ARM64 PE DLLs needs executable mappings of unsigned code, so it needs JIT. Record exactly where, for 14's no-JIT route.
 - A Wine prefix per game (keyed by hash) inside the app's data: creation, and its location under each install method.
 - Crash containment within limits: a game's crash takes the app down, but the next launch reports what happened.
 
-**Out:** 32-bit programs and the guest window (07), windows, graphics, and audio (08), and the no-JIT build (14).
+**Out:** 32-bit programs and the guest window (07), windows, graphics, and audio (08), and the no-JIT route (14).
 
 ## Needs
 

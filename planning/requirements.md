@@ -13,7 +13,7 @@ The owner, playing their own collection of Windows games on their own jailbroken
 1. Run Windows x86 games (i386 and amd64) on iOS and iPadOS.
 2. Run Linux x86-64 games on iOS and iPadOS.
 3. Run Kirikiri and Ren'Py games natively, with no x86 emulation, where the game allows it.
-4. Two builds: a main build that requires JIT and turns it on automatically on Dopamine and TrollStore, and a no-JIT build for AltStore and any device without JIT.
+4. One build that turns JIT on automatically on Dopamine and TrollStore, uses JIT wherever the process has it, and falls back to routes that need no JIT (AltStore, or any install where JIT is missing).
 5. Show game text correctly in any language the game was written for.
 6. Translate game text while the game runs, into the user's language.
 7. Install as a Dopamine rootless package from the Sileo source.
@@ -37,24 +37,26 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 ## Functional requirements
 
 ### Builds and JIT
-- **Main build (JIT required).** Ships as the Dopamine deb and the TrollStore `.tipa`. FEX-Emu is its only x86 translator, for both Windows and Linux games. It turns JIT on automatically:
+- **One build.** One app binary, built once, ships as all three artifacts: the Dopamine deb, the TrollStore `.tipa`, and the AltStore `.ipa`. The artifacts differ only in entitlements and packaging. The app decides at run time, from whether the process has usable JIT, which routes it offers.
+- **Turning JIT on.** The app turns JIT on automatically where the install method allows it:
   - on Dopamine, using what Dopamine provides, with no setup or extra tool for the user
   - on TrollStore, through TrollStore's "launch with JIT" URL scheme (`apple-magnifier://enable-jit?bundle-id=<id>`, TrollStore 2.0.12 and later), the way UTM and PojavLauncher do. It does not use the `dynamic-codesigning` entitlement: iOS 15 and later on A12 and newer chips ban it, and apps signed with it crash on launch.
-- **No-JIT build.** Ships as the AltStore `.ipa`. It runs:
+  - on AltStore it never requests JIT. It uses JIT if a JIT enabler such as StikDebug has given it to the process.
+- **With JIT:** FEX-Emu is the x86 translator, for both Windows and Linux games.
+- **Without JIT:** the app runs:
   - the native engines (Kirikiri and Ren'Py)
-  - 32-bit Windows games through Box64's interpreter, loaded into Wine as Box64's WoW64 DLL. Box64 has no ARM64EC DLL, so 64-bit Windows games (including Unity) and Linux games need the main build. Box64 appears only in this build. Wine's own code and Box64's DLL are built into signed Mach-O files, which AltStore signs with the rest of the app at install. This route is slow, and is aimed at 2D visual novels.
-  
-  If a JIT enabler such as StikDebug has given the process JIT, the no-JIT build may use it, but it does not need it.
-- Both builds run the native engines.
-- For each game, the app shows which route it will use and why.
+  - 32-bit Windows games through Box64's interpreter, loaded into Wine as Box64's WoW64 DLL. Box64 has no ARM64EC DLL, so 64-bit Windows games (including Unity) and Linux games need JIT. Wine's own code and Box64's DLL are built into signed Mach-O files, which are signed with the rest of the app. This route is slow, and is aimed at 2D visual novels.
+- JIT that the process has but cannot use counts as no JIT. An example is a device with Apple's Trusted Execution Monitor (iOS 26 and later), where JIT memory also has to be approved by an attached debugger.
+- Every install method runs the native engines.
+- For each game, the app shows which route it will use and why, including when a route is unavailable because the process has no JIT.
 
 ### Running Windows games
-- Runs 32-bit and 64-bit Windows x86 games using Wine, with FEX-Emu translating the games' x86 code to ARM64 in the main build, and Box64's interpreter in the no-JIT build.
+- Runs 32-bit and 64-bit Windows x86 games using Wine, with FEX-Emu translating the games' x86 code to ARM64 when the process has JIT, and Box64's interpreter for 32-bit games when it does not.
 - Supports the graphics, audio, video, and file features the target engines use, drawing through Metal.
 - Supports plugins and DLLs that games ship alongside their executable.
 
 ### Running Linux games
-- Runs Linux x86-64 games using FEX-Emu, in the main build only.
+- Runs Linux x86-64 games using FEX-Emu, only when the process has JIT.
 - Covers what Linux games need on iOS: graphics, audio, and input.
 
 ### Native engines
@@ -98,8 +100,8 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 
 ### Packaging
 - A Dopamine rootless deb, package id `com.getboolean.eikon`, published on the `eikon-source` Sileo repo through GitHub Pages. Only package files go there, never app source.
-- A TrollStore build (`Eikon.tipa`) and an AltStore build (`Eikon.ipa`), built from the same sources and version as the deb.
-- The deb and the `.tipa` run unsandboxed (`com.apple.private.security.no-sandbox`), which TrollStore documents and Dopamine honors. The `.tipa` keeps its data container, which TrollStore says `no-sandbox` allows. Neither uses root helpers (`com.apple.private.persona-mgmt`) or any entitlement TrollStore lists as banned. If `platform-application` is added, TrollStore notes that `com.apple.private.security.storage.AppDataContainers` may also be needed.
+- A TrollStore package (`Eikon.tipa`) and an AltStore package (`Eikon.ipa`). All three packages carry the same app binary at the same version, and differ only in entitlements and packaging.
+- The deb and the `.tipa` run unsandboxed (`com.apple.private.security.no-sandbox`), which TrollStore documents and Dopamine honors. The `.tipa` keeps its data container, which TrollStore says `no-sandbox` allows. Neither uses root helpers (`com.apple.private.persona-mgmt`) or any entitlement TrollStore lists as banned. Neither uses `platform-application` (decided 2026-09-27). It moves the app to a stricter IOKit sandbox profile, so Metal would need GPU exceptions. It can also cost the data container unless `com.apple.private.security.storage.AppDataContainers` is added. No planned feature needs it.
 
 ## Constraints
 
@@ -112,11 +114,12 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
   - A crash in a game takes the app down with it.
 - **What each install method allows:**
 
-  | | Dopamine deb (main) | TrollStore `.tipa` (main) | AltStore `.ipa` (no-JIT) |
+  | | Dopamine deb | TrollStore `.tipa` | AltStore `.ipa` |
   |---|---|---|---|
-  | JIT | Automatic, through Dopamine | Automatic, through TrollStore's JIT launch | Not needed. Used if a JIT enabler provides it |
-  | x86 translation | FEX JIT | FEX JIT | Box64 interpreter |
-  | Wine's own code | Loaded normally under JIT | Loaded normally under JIT | Pre-built signed Mach-O, signed at install |
+  | JIT | Automatic, through Dopamine | Automatic, through TrollStore's JIT launch | Never requested. Used if a JIT enabler provides it |
+  | x86 translation, usual case | FEX JIT | FEX JIT | Box64 interpreter (FEX if an enabler gave usable JIT) |
+  | x86 translation, without JIT | Box64 interpreter | Box64 interpreter | Box64 interpreter |
+  | Wine's own code | Loaded normally under JIT, signed Mach-O without | Loaded normally under JIT, signed Mach-O without | Signed Mach-O, signed at install |
   | 32-bit address space | Guest window | Guest window | Guest window |
   | Native engines | Yes | Yes | Yes |
 - **Hardware facts to design around:**
@@ -124,16 +127,16 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
   - Darwin clears register x18, which Windows ARM64 code uses for its thread pointer (TEB). Madeira shows a working approach: patch x18 reads in loaded Windows modules into trampolines that fetch the TEB from thread-local storage (`TPIDRRO_EL0`), catch any reads the patching misses with a fault handler, and have the Wine dispatcher restore x18 on entry.
   - The kernel refuses to launch any 64-bit ARM executable whose `__PAGEZERO` is smaller than 4 GB (`xnu/bsd/kern/mach_loader.c`: "64 bit ARM binary must have 'hard page zero' of 4GB"). Once a process has launched, its lowest usable address can only be raised (`vm_map_raise_min_offset`). No install method can give an iOS app memory below 4 GB.
   - Writing to JIT memory needs a second, writable address on A12 and later chips.
-  - iOS runs only signed code unless the process has JIT. Wine's own ARM64 DLLs, which Wine loads itself, count as unsigned code, so the no-JIT build needs them delivered as signed code.
+  - iOS runs only signed code unless the process has JIT. Wine's own ARM64 DLLs, which Wine loads itself, count as unsigned code, so the no-JIT route needs them delivered as signed code.
 - **Low memory for 32-bit games: a guest window.** Every 32-bit Windows program gets a 4 GB window [B, B+4 GB) somewhere in the address space, and its address `a` lives at real address `B+a`. What that takes:
-  - FEX adds B to every memory access in translated 32-bit code, and so does Box64's interpreter in the no-JIT build.
+  - FEX adds B to every memory access in translated 32-bit code, and so does Box64's interpreter on the no-JIT route.
   - Wine's WoW64 layer adds or removes B wherever a pointer crosses between the 32-bit program and 64-bit Wine.
   - Wine's memory manager places everything a 32-bit program sees inside its window: the 32-bit TEB and PEB, stacks, relocated 32-bit DLLs, and `KUSER_SHARED_DATA` at B+`0x7ffe0000`. Any address limit a program asks for (addresses below L) becomes [B, B+L).
   - GPU memory that a 32-bit game maps also has to land inside its window.
 
   This is the design in Madeira's WoW64 work (PR #26), and QEMU's user-mode emulation uses the same idea. It works on every install method.
 - **Guest-running work is gated on device measurements:** whether the process has JIT, and whether the x18 workaround and the guest window hold up on that device. A stage that fails a gate builds and passes its desktop check, but makes no device claim.
-- **Upstream code stays clean.** Submodules are pinned (FEX `FEX-2609`, Box64 at a tag for the no-JIT build, Wine `wine-11.0` or bylaws' `upstream-arm64ec` branch if needed, and Kirikiroid2 at a commit). Changes live as patch files.
+- **Upstream code stays clean.** Submodules are pinned (FEX `FEX-2609`, Box64 at a tag for the no-JIT route, Wine `wine-11.0` or bylaws' `upstream-arm64ec` branch if needed, and Kirikiroid2 at a commit). Changes live as patch files.
 - **Licensing:**
   - Eikon is GPL-3.0-or-later. That is compatible with Wine (LGPL-2.1-or-later), FEX and Box64 (MIT), Kirikiroid2 (BSD-style), and GPL code.
   - Kirikiroid2's Kodi-derived video player may ship. Its Android-only storage code (from AmazeFileManager, GPL-3.0) is not needed on iOS.
@@ -142,7 +145,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 - **Stay on iOS:**
   - The iOS host layer is new.
   - Autorun's Horizon server, libnx, NRO packaging, and Switch drivers are not copied.
-  - QEMU and v86 are not used. Linux games use FEX only; Box64 is used only for Windows games, and only in the no-JIT build.
+  - QEMU and v86 are not used. Linux games use FEX only; Box64 is used only for 32-bit Windows games, and only when the process has no usable JIT.
 
 ## Test data
 
@@ -177,7 +180,7 @@ For Eikon, that means: build the graphics layers as ARM64EC for 64-bit games; st
 
 ## Operational requirements
 
-- Sign every binary and dylib in each build so it loads under its install method: ad-hoc with `ldid` for Dopamine, TrollStore's signing for the `.tipa`, and AltStore's signing at install for the `.ipa`.
+- Sign every binary and dylib in each package so it loads under its install method: ad-hoc with `ldid` for Dopamine, TrollStore's signing for the `.tipa`, and AltStore's signing at install for the `.ipa`.
 - Run Wine's server as a thread inside the app process, and replace its use of Mach task ports, which iOS restricts.
 - Survive iOS memory limits for the app process. Unity games need gigabytes.
 - Handle the app going to the background while a game runs: pause the game, and stop Metal drawing, since using Metal in the background crashes the process.
@@ -188,14 +191,14 @@ For Eikon, that means: build the graphics layers as ARM64EC for 64-bit games; st
 Made by the owner on 2026-09-27:
 
 - **License:** GPL-3.0-or-later. Kirikiroid2's GPL-derived video player may ship.
-- **Builds:** a main build that requires JIT (Dopamine deb and TrollStore `.tipa`), and a no-JIT build for AltStore (native engines, plus Box64's interpreter).
+- **Builds:** one build, shipped as the Dopamine deb, the TrollStore `.tipa`, and the AltStore `.ipa`. The app picks routes at run time from whether it has usable JIT. This replaced the earlier two-build plan (main and no-JIT) on 2026-09-27, so that installs without JIT still run the no-JIT routes, and AltStore installs with JIT from an enabler can use FEX.
 - **JIT:** automatic on Dopamine and TrollStore. Relying on Dopamine's and TrollStore's mechanisms is acceptable.
-- **Entitlements:** unsandboxed for the deb and the `.tipa`. No root helpers.
+- **Entitlements:** unsandboxed for the deb and the `.tipa`, with `get-task-allow` on the `.tipa` for TrollStore's JIT launch. Sideloaded apps already need Developer Mode. No root helpers, and no `platform-application`.
 - **Process model:** games run inside the app process on every install method.
 - **32-bit address space:** a guest window, not a small `__PAGEZERO`, which the iOS kernel rejects.
 - **Madeira:** take its design decisions, but do not build on its code or forks. It is a research prototype, far from complete.
-- **Translators:** FEX only in the main build, for Windows and Linux games. Box64 only in the no-JIT build, and only for its interpreter.
-- **No pre-translated signed route.** It is not needed while the main build has JIT and the no-JIT build has an interpreter.
+- **Translators:** FEX when the process has usable JIT, for Windows and Linux games. Box64's interpreter only when it does not, and only for 32-bit Windows games.
+- **No pre-translated signed route.** It is not needed while JIT installs have FEX and the no-JIT route has an interpreter.
 
 ## Known risks
 
@@ -204,8 +207,8 @@ Made by the owner on 2026-09-27:
 - Upstream Wine lacks pieces FEX's DLLs need.
 - MoltenVK lacks Vulkan features that DXVK expects.
 - Speed: FEX follows x86's strict memory ordering by default, which costs speed on these chips.
-- Box64's interpreter is typically ten or more times slower than a JIT. Expect the no-JIT build to suit 2D visual novels, not Unity.
-- Wine's DLLs normally load as PE files. The no-JIT build needs them, and Box64's DLL, as signed Mach-O files, which neither project builds today.
+- Box64's interpreter is typically ten or more times slower than a JIT. Expect the no-JIT route to suit 2D visual novels, not Unity.
+- Wine's DLLs normally load as PE files. The no-JIT route needs them, and Box64's DLL, as signed Mach-O files, which neither project builds today.
 - Box64 would need to add the guest-window base to every memory access. Its 32-bit support assumes the low 4 GB today.
 - A native Ren'Py must match each game's Ren'Py version closely, and some games ship native Python extensions built for x86.
 - Running everything in one process:
