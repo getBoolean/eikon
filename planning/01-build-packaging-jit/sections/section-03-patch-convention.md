@@ -1,175 +1,51 @@
-# Section 03: Submodule and patch convention
+# Section 03: Third-party libraries from fork releases
+
+(Originally "Submodule and patch convention". On 2026-09-27 the owner changed the design twice: first "avoid submodules, they are a pain to work with", then "use releases to distribute the libraries instead of pinning to a commit". The first implementation, commit `60d29c9`, was replaced by the one described here.)
 
 ## Overview
 
-Eikon will later build several upstream projects (as git submodules) for iOS. This section sets up the convention those later splits follow, and the tool that applies local patches to them. In split 01 there are **no submodules and no patches yet**. The deliverables are the convention document, the patch tool, two Makefile targets, and a small behavioral pytest suite that proves the tool works against a throwaway fixture repo.
+Eikon will later link several upstream projects (FEX, Wine, Box64, Kirikiroid2) built for iOS. Split 01 has none yet. This section sets up the convention later splits follow, and the tool that manages it:
 
-Deliverables:
+- Each upstream is a **fork** on the owner's GitHub. Eikon's changes are commits on the fork's `eikon` branch, and the fork is cloned next to this repo for development.
+- The fork **builds its library and publishes it as a GitHub release**. The release tag records the fork commit, keeps it reachable after rebases, and serves as the GPL corresponding source.
+- Eikon **doesn't build upstream source**. `third_party/deps.toml` pins each release asset by fork, tag, asset name and SHA-256. The build downloads it into `build/deps/<name>/`.
 
-- `third_party/README.md`: the submodule and patch convention, plus notes for later cross-compiles.
-- `patches/.gitkeep`: keeps the (empty) `patches/` directory in git.
-- `scripts/apply_patches.py`: applies patches with `git apply` only, and restores submodules to their pins.
-- `Makefile`: real `apply-patches` and `unpatch` targets (replacing the stubs from section 01).
-- `tests/test_apply_patches.py`: pytest tests with fixture submodules.
+Forking and publishing releases are outward-facing steps, so the owner does them, or approves them, when a later split needs an upstream.
 
-## Dependencies
+## Deliverables (as built)
 
-- **Requires section-01-skeleton-tooling:** the `Makefile` (with stub `apply-patches` / `unpatch` targets), `pyproject.toml` with pytest run through `uv`, `.python-version`, and the `tests/` scaffold (including any shared temporary-git-repo helper in `tests/conftest.py`; reuse it if it fits, otherwise keep helpers local to this test file).
-- **Blocks:** nothing. It can be done in parallel with section-02-xcode-project.
-- Section 04 (credits) is related through the rule "the commit that adds a submodule adds its credits entry", but nothing here depends on it.
+- **`third_party/README.md`:** the convention, the manifest schema, the commands, the release workflow, credits in the same commit, and notes for building the libraries in the forks (the original cross-compile notes, plus nested submodules in forks such as FEX).
+- **`third_party/deps.toml`:** the manifest. It is empty in split 01 and documents its schema in comments.
+- **`scripts/deps.py`:** standard library only, run through `uv run`.
 
-## Cross-cutting rules that apply here
+  | Command | What it does |
+  |---|---|
+  | `check` | Validates the manifest, with no network access. Required keys are `name` (lowercase), `repo` (`owner/repo`), `tag`, `asset` and a 64-hex `sha256`. `upstream` is optional. Names must be unique. Unknown keys and non-table entries are rejected. |
+  | `fetch [names]` | Downloads `https://github.com/<repo>/releases/download/<tag>/<asset>`, with `$EIKON_RELEASES_URL` replacing the base if set. It caches the asset by hash in `build/deps/.cache/` and refuses a hash mismatch or a truncated download, naming the dependency. It unpacks `.tar.*` (gz, xz, bz2) with tarfile's `data` filter, `.zip` with path checks, or copies a single file. Unpacking happens in a staging directory. The swap removes the old stamp, moves the old tree aside, renames staging into place, and only then writes the stamp (`build/deps/.stamps/<name>`, holding the pin and every file's SHA-256), so an interrupted swap never verifies. A dependency that already matches its pin is skipped. Fetching everything also removes directories no manifest entry owns. |
+  | `verify [names]` | Every dependency matches its pin, with every file's hash unchanged since unpacking, and `build/deps/` holds nothing outside the manifest. |
+  | `pin NAME --tag TAG [--asset A]` | Downloads the release asset into the cache and rewrites that entry's `tag`, `asset` and `sha256`. It refuses a pinned tag whose asset has changed, because a pinned release must never be replaced. Before writing, it checks with tomllib that every other value is unchanged, then writes atomically, keeping line endings. |
 
-- Tests are few and behavioral. They check what the tool does to a real git tree. They never assert the exact wording of error messages, the contents of the README, constants, or internal structure. Where a test checks that an error "names the component and the patch", it searches the output for the fixture's own component name and patch filename, which the test itself chose.
-- No program or game titles anywhere, including fixture names. Use neutral names such as `libdemo` and `0001-change-greeting.patch`.
-- Python scripts run via `uv run` and use only the standard library (plus pytest for tests).
+  Archive, network and filesystem errors become one-line errors naming the dependency.
+- **`Makefile`:**
+  - `fetch-deps`, `verify-deps` and `pin-dep NAME= TAG= [ASSET=]` replace the `apply-patches` and `unpatch` stubs.
+  - `check` also runs `deps.py check`.
+- **CI:** the `scripts` job runs `deps.py check`.
+- **`tests/test_deps.py`:** five behavioural tests (six cases) against a local `file://` release root.
+  1. `fetch` unpacks the pinned asset, `verify` passes, and a second `fetch` leaves the same tree. Editing an unpacked file fails `verify`. A valid manifest passes `check`.
+  2. A release asset replaced after pinning is rejected, naming the dependency. Nothing is unpacked, and `verify` fails.
+  3. An archive member that escapes the tree is rejected, nothing is unpacked, and nothing is written outside the tree.
+  4. `pin` records a new tag's hash, and `fetch` then unpacks the new asset.
+  5. `check` rejects a short hash and a duplicate name.
 
----
+## Rules for later splits
 
-## Tests first
-
-File: `tests/test_apply_patches.py`. Run with `make test-scripts` (`uv run pytest tests/`).
-
-### Fixture
-
-Build, in a pytest `tmp_path`:
-
-1. An **upstream repo** with a couple of committed text files. Record the commit SHA; this is the pin.
-2. A **superproject repo** that adds the upstream as a submodule at `third_party/<name>` (for example `third_party/libdemo`), with `.gitmodules` setting `ignore = dirty`, and commits it. The gitlink records the pinned SHA.
-3. A **patch directory** `patches/<name>/` in the superproject holding one or two patches made with `git format-patch` against the pinned commit (make a temporary commit in a scratch clone of the upstream, run `format-patch`, and copy the files in). Name them `0001-…patch`, `0002-…patch` so lexical order matters.
-4. Optionally, a second upstream commit after the pin, so a test can prove the tool uses the gitlink rather than the upstream's newest commit.
-
-Practical notes:
-
-- Recent git refuses local-path submodule clones by default. The **tests** pass `-c protocol.file.allow=always` (or set `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` in the environment used to run the script). The script itself must not hard-code this setting.
-- Set a fixed `user.name`/`user.email` in the fixture repos (via `-c` or env) so commits work on machines and CI runners with no global git identity.
-- Invoke the script as a subprocess (`uv run scripts/apply_patches.py …` or `sys.executable scripts/apply_patches.py …`) with `--repo-root <fixture superproject>`, so the test goes through the real command-line interface.
-
-### Tests
-
-Keep to these four:
-
-1. **Apply changes the tree and is idempotent.** After `apply`, the submodule's working tree reflects the patches (compare the patched file against what the fixture patch was built from, e.g. read it back from the scratch clone, rather than a hard-coded string). Running `apply` a second time succeeds and leaves an identical tree (compare a snapshot of file contents, or `git -C <sub> diff` output, before and after).
-2. **The superproject records no new submodule commit.** After `apply`, the submodule's `HEAD` still equals the gitlink SHA (`git ls-tree HEAD third_party/<name>`), and `git status --porcelain` / `git diff --submodule` in the superproject shows no "new commits" for that submodule.
-3. **A conflicting patch fails cleanly.** Add a patch that cannot apply at the pin (it targets content that doesn't exist). `apply` exits non-zero; its combined output contains the component name and that patch's filename; afterwards the submodule is at its pinned commit with a clean working tree (`git -C <sub> status --porcelain` empty, `HEAD` equals the pin). Earlier patches in the same component must not be left half-applied.
-4. **Restore returns to the pin.** After a successful `apply`, `restore` leaves the submodule at its pinned commit with a clean working tree.
-
-Not tested: README contents, exact messages, the Makefile wiring (exercised by running `make apply-patches` / `make unpatch` once by hand).
-
----
-
-## Implementation
-
-### 1. `third_party/README.md`
-
-Write the convention as a short document for future contributors. It must cover:
-
-**Location and pinning**
-- Every upstream is a git submodule at `third_party/<name>`, pinned to a tag or commit.
-- `.gitmodules` sets `ignore = dirty` for every submodule, so applied (uncommitted) patches don't show as changes in the superproject.
-
-**Patches**
-- Local changes to an upstream live **only** as `patches/<name>/NNNN-short-description.patch`, where `<name>` matches the submodule directory name and `NNNN` is a zero-padded sequence number.
-- Create them with `git format-patch` against the pinned revision (commit in the submodule temporarily, export, then reset).
-- They apply in lexical order **with `git apply` (working tree only)**. The submodule's `HEAD` never moves and the superproject never records a patched commit. Never commit inside a submodule and never bump a gitlink to a patched commit.
-- `make apply-patches` applies them; `make unpatch` resets every submodule to its pin with a clean tree. Both accept component names via `uv run scripts/apply_patches.py apply|restore [names…]`.
-- When bumping a pin, regenerate or refresh the component's patches against the new revision in the same commit.
-
-**Out-of-tree builds**
-- Upstream builds must build **out of tree**, under `build/`. Resetting a submodule runs a full clean of its working tree, which deletes anything built inside it.
-
-**Credits in the same commit**
-- The commit that adds a submodule must also add its credits entry in `third_party/credits.toml` and its license texts under `licenses/` (the credits pipeline is a separate section). CI enforces this.
-
-**Notes for later splits (cross-compiling for iOS)**
-- Cross-compile flags: `CC="$(xcrun --sdk iphoneos -f clang) -target arm64-apple-ios15.0"` with `-isysroot "$(xcrun --sdk iphoneos --show-sdk-path)"`.
-- Per build system: CMake `CMAKE_SYSTEM_NAME=iOS`; autotools `--host=aarch64-apple-darwin`; meson cross file with `subsystem='ios'`.
-- Set `ac_cv_func_pipe2=no` for the iOS 27 SDK.
-- Keg-only Homebrew `bison` and `flex` must be put on `PATH` explicitly.
-- llvm-mingw is the host toolchain for Wine's PE side.
-- Dynamic libraries go in `Frameworks/<name>.framework` with `@rpath` install names.
-- CI caches are keyed on the dependency build scripts, `patches/**`, and submodule SHAs.
-
-### 2. `patches/.gitkeep`
-
-Git doesn't track empty directories. Add an empty `patches/.gitkeep` so the directory exists in split 01.
-
-### 3. `scripts/apply_patches.py`
-
-Standard library only. Run as:
-
-```
-uv run scripts/apply_patches.py [--repo-root PATH] apply   [names…]
-uv run scripts/apply_patches.py [--repo-root PATH] restore [names…]
-```
-
-`--repo-root` defaults to the superproject root (the git top-level containing the script, or the current directory's top-level). It exists so tests can point the script at a fixture repo.
-
-Signatures (from the plan):
-
-```python
-def apply_all(repo_root: Path, components: list[str] | None = None) -> None:
-    """For each submodule (or the named ones): read the pinned commit from the superproject's
-    gitlink (`git ls-tree HEAD <path>`), make sure the submodule is initialised and checked
-    out at exactly that commit with a clean working tree, then for each patches/<name>/*.patch
-    in lexical order run `git apply --check` and then `git apply`. Running it twice yields the
-    same tree. A patch that fails --check aborts with the component and patch name, and the
-    submodule is left reset to its pin."""
-
-def restore_all(repo_root: Path, components: list[str] | None = None) -> None:
-    """Reset submodules to their pinned commits with clean working trees (make unpatch)."""
-```
-
-Behaviour:
-
-- **Discovering submodules.** Read the submodule paths from `.gitmodules` (`git config -f .gitmodules --get-regexp '^submodule\..*\.path$'`). The component name is the last path component under `third_party/`. A missing `.gitmodules` means "no submodules": both commands succeed and do nothing (this is the state in split 01).
-- **Pinned commit.** Always from the superproject's gitlink: `git ls-tree HEAD <path>` (the entry of type `commit`). Never from the submodule's current `HEAD` or the upstream's branch tip.
-- **Reset to pin** (shared by apply and restore): if the submodule isn't initialised, run `git submodule update --init -- <path>`. Then, inside the submodule, check out the pinned commit detached (`git checkout --detach <sha>`, fetching first only if the commit is missing), `git reset --hard <sha>`, and `git clean -ffdx`. This is what makes a second `apply` start from the same base, and what makes the tool idempotent.
-- **Apply.** After reset, for each `patches/<name>/*.patch` sorted lexically: run `git apply --check <patch>` in the submodule, then `git apply <patch>`. On any failure, reset the submodule to its pin again, then exit non-zero with a message that names the component and the patch file, plus git's own stderr. Stop processing further components.
-- **Components without a patch directory** are just reset to their pin.
-- **Named components.** If names are given, operate only on those. A name that isn't a known submodule is an error (non-zero exit). When applying to all components, a `patches/<name>/` directory with no matching submodule is also an error, since it usually means a typo or a removed submodule.
-- **Never** commit in a submodule, never run `git am`, never stage anything in the superproject.
-- Exit code 0 on success, non-zero on any failure; errors go to stderr.
-
-### 4. Makefile
-
-Replace the section-01 stubs:
-
-| Target | Command |
-|---|---|
-| `apply-patches` | `uv run scripts/apply_patches.py apply` |
-| `unpatch` | `uv run scripts/apply_patches.py restore` |
-
-Both must succeed in split 01 as no-ops (there is no `.gitmodules`). Mark them `.PHONY`.
-
----
+- A published release is never replaced once an Eikon commit pins it. Publish a new tag instead.
+- Builds that link a dependency run `make verify-deps` first.
+- The commit that adds a manifest entry also adds its credits entry and license texts (section 04). CI enforces this.
 
 ## Done when
 
-- `make test-scripts` passes, including the four tests above.
-- `make apply-patches` and `make unpatch` run successfully in the real repo (no submodules yet).
-- `third_party/README.md` documents the convention and the cross-compile notes above.
-- `patches/` exists in git via `patches/.gitkeep`.
+- `make test-scripts` passes: 9 tests (3 version, 6 deps).
+- `make check`, `fetch-deps` and `verify-deps` succeed as no-ops in the real repo. `pin-dep` without `NAME` and `TAG` prints its usage and fails.
 
----
-
-## Implementation notes (as built)
-
-Files: `third_party/README.md`, `patches/.gitkeep`, `scripts/apply_patches.py`, `tests/test_apply_patches.py`, and the `apply-patches` and `unpatch` Makefile targets. There are four tests, as planned. `tests/conftest.py`'s `run_script` fixture now runs `.py` scripts with the test interpreter.
-
-The tool is stricter than the plan in these ways (from the code review):
-
-- It removes `GIT_DIR`, `GIT_WORK_TREE` and the related variables from git's environment, so running it from a hook can't reset or clean the superproject.
-- The default root is the script's own repo, falling back to the current directory.
-- Before resetting, it checks that each submodule path is really the submodule's own checkout.
-- If fetching the pinned SHA fails, it falls back to a plain fetch of origin.
-- It fails on:
-  - a malformed `.gitmodules`
-  - a submodule path other than `third_party/<name>`
-  - duplicate component names
-  - a file in `patches/<name>/` that isn't a `.patch`
-- If the recovery reset also fails, both errors are reported.
-
-In the test fixture, the submodule is checked out at a later upstream commit before each test. That proves `apply` and `restore` follow the gitlink.
-
-The review trail is in `../implementation/code_review/section-03-*.md`.
+The review trail is in `../implementation/code_review/section-03-*.md`. The first review covers the replaced submodule tool.

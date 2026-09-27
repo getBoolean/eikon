@@ -38,12 +38,12 @@ The source is `claude-plan.md` for design and `claude-plan-tdd.md` for tests. Se
   - Build: the app builds and launches in the simulator with `make test-swift`.
   - Debug loop: README note.
   - CI: minimal `.github/workflows/ci.yml` (scripts job and build/test job, `fetch-depth: 0`, SHA-pinned actions, read-only permissions).
-- **section-03-patch-convention**
-  - Covers: plan §5.1, §5.2.
-  - `third_party/README.md` (convention, including notes for later cross-compiles).
-  - `scripts/apply_patches.py` using `git apply` only, pinned from the gitlink.
-  - `make apply-patches` and `make unpatch`.
-  - Tests: pytest tests with fixture submodules.
+- **section-03-patch-convention** (now: third-party libraries from fork releases)
+  - Covers: plan §5.1 and §5.2, as revised by the owner: fork releases, not submodules or patches.
+  - `third_party/README.md` (the convention, the release workflow, and notes for building in the forks) and `third_party/deps.toml` (an empty manifest of pinned release assets).
+  - `scripts/deps.py` (`check`, `fetch`, `verify`, `pin`), which downloads, checks by SHA-256 and unpacks into `build/deps/`.
+  - `make fetch-deps`, `verify-deps` and `pin-dep`.
+  - Tests: pytest tests against a local `file://` release root.
 - **section-04-credits-pipeline**
   - Covers: plan §6 and §4.2 (acknowledgements wiring).
   - `third_party/credits.toml` (empty), `scripts/credits.py` (check, notices, app-json), and the generated `THIRD_PARTY_NOTICES.md`.

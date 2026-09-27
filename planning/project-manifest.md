@@ -84,7 +84,7 @@ The repo has no app code yet. Split 01 creates the project.
 
 - No program titles in the repo, logs, tests, commits, or remote paths. Key everything by hash. Test content is original.
 - `/Volumes/Games` is read-only. Scans print only counts, engine names, plugin file names, and hashes.
-- Upstream code is pinned as submodules and changed only through patch files. Keep copyright headers, and credit every component in the same commit that adds it.
+- Upstream code comes from forks on the owner's GitHub, with changes as commits on the fork's `eikon` branch. Each fork builds its library for iOS and publishes it as a GitHub release. Eikon pins releases in `third_party/deps.toml` and downloads them. There are no submodules and no patch files. Keep copyright headers, and credit every component in the same commit that adds it.
 - Everything runs in the app process. No helper processes, and no exploit, `ptrace`, or task-for-pid.
 - A split whose device gate fails still builds and passes its desktop check, but makes no device claim. Record device, iOS version, chip, install method, and build with every device result.
 - Privacy: game text leaves the device only through a translation backend the user turned on. Saves go only to the user's own WebDAV server.

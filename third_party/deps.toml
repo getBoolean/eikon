@@ -1,0 +1,10 @@
+# Prebuilt libraries Eikon links, each a release asset of a fork on GitHub.
+# See third_party/README.md. Managed with `uv run scripts/deps.py`.
+#
+# [[dep]]
+# name     = "fexcore"                            # unpacks to build/deps/<name>/
+# repo     = "getBoolean/FEX"                     # the fork that publishes the release
+# tag      = "eikon-fexcore-1"                    # the release tag
+# asset    = "fexcore-ios-arm64.tar.xz"           # the release asset (.tar.*, .zip, or a single file)
+# sha256   = "<64 hex characters>"                # the asset's hash; fetch refuses anything else
+# upstream = "https://github.com/FEX-Emu/FEX"     # optional; the original project

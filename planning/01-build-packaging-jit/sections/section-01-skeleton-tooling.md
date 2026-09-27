@@ -58,7 +58,7 @@ eikon/
     doctor.sh             (01)
     bootstrap.sh          (01)
     version.sh            (01)
-    apply_patches.py            section 03
+    deps.py                     section 03 (replaced apply_patches.py)
     credits.py                  section 04
     archive.sh  package.sh  verify_artifacts.py   section 10
     file_device_report.py       section 08
@@ -240,7 +240,7 @@ Full target list for the whole split. **Real** means implemented in this section
 | `verify` | `uv run scripts/verify_artifacts.py dist/` | stub (section 10) |
 | `all` | `check test archive package verify` | real as a composition; fails at the first stub until section 10 |
 | `publish` | `scripts/repo/publish.sh` | stub (section 11) |
-| `apply-patches` / `unpatch` | `uv run scripts/apply_patches.py apply` / `restore` | stub (section 03) |
+| `apply-patches` / `unpatch` (replaced in section 03 by `fetch-deps`, `verify-deps`, `pin-dep`) | `uv run scripts/apply_patches.py apply` / `restore` | stub (section 03) |
 | `clean` | removes `build/` and `dist/` | real |
 
 **Stub behaviour.** A stub prints which section implements it (for example "`archive`: not implemented yet (section 10)") and exits 1, so nothing passes silently.

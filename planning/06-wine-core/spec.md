@@ -13,7 +13,7 @@ Bring Wine up on iOS inside the Eikon app process, and run a 64-bit Windows x86 
 ## Scope
 
 **In:**
-- Wine as a submodule at `wine-11.0`, switched to bylaws' `upstream-arm64ec` branch only if a missing piece that FEX's DLLs need blocks progress (record which one). iOS changes as patch files.
+- Wine as a fork starting from `wine-11.0`. It is rebased onto bylaws' `upstream-arm64ec` branch only if a missing piece that FEX's DLLs need blocks progress (record which one). iOS changes are commits on the fork's `eikon` branch. The fork publishes its builds as GitHub releases, and Eikon pins them in `third_party/deps.toml`.
 - Cross-build: Wine's build tools built for the Mac first, then Wine's Unix side cross-compiled for iOS arm64 (a new host target). PE DLLs built with llvm-mingw (`--enable-archs` including arm64ec and aarch64, following Proton). Mach-O Unix libraries linked or loaded into the app.
 - The Darwin ARM64 CPU layer for Wine's ntdll Unix side (Wine's macOS port is x86_64 only, so this is new): signals, contexts, and exception dispatch.
 - **`wineserver` as a thread** in the app process. Replace its use of Mach task ports for thread state and memory access with in-process equivalents.

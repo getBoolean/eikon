@@ -1,36 +1,53 @@
 # Third-party components
 
-Eikon builds several upstream projects for iOS. This directory holds them as
-git submodules. Any local changes are kept as patch files, not as commits.
+Eikon links several upstream projects built for iOS: FEX, Wine, Box64 and Kirikiroid2. It doesn't build them itself, and there are no submodules and no patch files. Instead:
 
-## Location and pinning
+- **Each upstream is a fork** on the owner's GitHub. Eikon's changes are commits on the fork's `eikon` branch. For development, the fork is cloned next to this repo (`../<fork>`).
+- **The fork builds its library and publishes it as a GitHub release.** Each release tag names exactly which fork commit the binaries came from. It also keeps that commit reachable after a rebase, and it is where the GPL corresponding source is published.
+- **Eikon pins a release.** `third_party/deps.toml` records the fork, the release tag, the asset name and the asset's SHA-256. The build downloads that asset into `build/deps/<name>/` and links against it.
 
-- Every upstream is a git submodule at `third_party/<name>`, pinned to a tag or commit.
-- `.gitmodules` sets `ignore = dirty` for every submodule, so applied (uncommitted) patches don't show up as changes in the superproject.
+## The manifest: `third_party/deps.toml`
 
-## Patches
+Each dependency is one `[[dep]]` table:
 
-- Local changes to an upstream live **only** in `patches/<name>/NNNN-short-description.patch`. `<name>` matches the submodule directory name, and `NNNN` is a zero-padded sequence number.
-- To make a patch, commit in the submodule temporarily, export with `git format-patch` against the pinned revision, then reset the submodule.
-- Patches apply in lexical order with `git apply`, to the working tree only. The submodule's `HEAD` never moves, and the superproject never records a patched commit. Never commit inside a submodule, and never bump a gitlink to a patched commit.
-- `make apply-patches` applies them. `make unpatch` resets every submodule to its pin with a clean tree. To work on some components only, name them: `uv run scripts/apply_patches.py apply|restore [names…]`.
-- A patch that doesn't apply stops the run with the component and patch name, and that submodule is reset to its pin.
-- When you bump a pin, regenerate or refresh that component's patches against the new revision in the same commit.
+- `name`: unpacks to `build/deps/<name>/`
+- `repo`: the fork, as `owner/repo`
+- `tag`: the release tag
+- `asset`: the asset file: `.tar.gz`, `.tar.xz`, `.tar.bz2`, `.zip`, or a single file copied as-is. Prefer tar: zip extraction drops the executable bit. Other archive formats, such as `.tar.zst`, are rejected.
+- `sha256`: the asset's hash; `fetch` refuses anything that doesn't match
+- `upstream` (optional): the original project, for reference
 
-## Out-of-tree builds
+## Commands
 
-Upstream builds must happen **out of tree**, under `build/`. Resetting a submodule fully cleans its working tree (`git clean -ffdx`), which deletes anything built inside it.
+- `make fetch-deps`: downloads each pinned asset, checks its hash and unpacks it. Downloads are cached in `build/deps/.cache/` by hash, and a dependency that already matches its pin is skipped. Fetching everything also removes directories under `build/deps/` that no manifest entry owns.
+- `make verify-deps`: checks that every dependency is unpacked from its pinned asset with no file changed since, and that `build/deps/` holds nothing else. Builds that link a dependency run this first.
+- `make pin-dep NAME=<name> TAG=<tag> [ASSET=<asset>]`: downloads the release asset and writes its tag, asset and SHA-256 into the manifest. It refuses a release whose asset changed under an already-pinned tag. Commit the manifest change in eikon.
+- `make check`: includes `deps.py check`, which validates the manifest without network access.
+
+To act on some dependencies only, name them: `uv run scripts/deps.py fetch|verify [names…]`.
+
+`EIKON_RELEASES_URL` replaces `https://github.com` as the download base. The tests use it; it is also handy for a mirror.
+
+Downloads are unauthenticated, so the forks and their releases must be public.
+
+## Releasing a new version of a library
+
+1. In the fork, commit to the `eikon` branch and push. Rebasing onto a newer upstream is fine: each release's tag keeps the commits it was built from.
+2. Build the library for iOS arm64 in the fork, using the notes below, and publish it as a release. The release notes name the fork commit and the upstream version it's based on. A release is never replaced once an Eikon commit pins it; publish a new tag instead.
+3. In eikon, run `make pin-dep NAME=<name> TAG=<tag>`, then `make fetch-deps`, and commit the manifest.
+
+Creating forks and publishing releases are outward-facing steps, so they need the owner's approval.
 
 ## Credits in the same commit
 
-The commit that adds a submodule must also add:
+The commit that adds a dependency also adds:
 
 - its credits entry in `third_party/credits.toml`
 - its license texts under `licenses/`
 
-CI enforces this.
+CI enforces this. For GPL and LGPL libraries, the notices point to the fork's release tag as the corresponding source.
 
-## Notes for cross-compiling for iOS
+## Notes for building the libraries for iOS (in the forks)
 
 - Compiler: `CC="$(xcrun --sdk iphoneos -f clang) -target arm64-apple-ios15.0"`, with `-isysroot "$(xcrun --sdk iphoneos --show-sdk-path)"`.
 - Build systems:
@@ -40,5 +57,5 @@ CI enforces this.
 - Set `ac_cv_func_pipe2=no` for the iOS 27 SDK.
 - Homebrew's `bison` and `flex` are keg-only, so put them on `PATH` explicitly.
 - llvm-mingw is the host toolchain for Wine's PE side.
-- Dynamic libraries go in `Frameworks/<name>.framework`, with `@rpath` install names.
-- CI caches are keyed on the dependency build scripts, `patches/**` and the submodule SHAs.
+- Dynamic libraries ship as `<name>.framework` bundles with `@rpath` install names. Eikon embeds them in `Frameworks/`.
+- Upstreams with their own git submodules (FEX, for example) need `git submodule update --init --recursive` in the fork before building.

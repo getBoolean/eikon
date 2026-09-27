@@ -13,7 +13,7 @@ Run Kirikiri games natively on iOS, with no x86 emulation, through a port of Kir
 ## Scope
 
 **In:**
-- Kirikiroid2 as a submodule pinned at a commit, with iOS changes as patch files. Build it for iOS arm64 with 01's build system.
+- Kirikiroid2 as a fork, with iOS changes as commits on the fork's `eikon` branch. The fork builds it and publishes it as a GitHub release, and Eikon pins that release in `third_party/deps.toml`. Build it for iOS arm64 with 01's build system.
 - Audit its dependency tree and licenses (Kirikiri 2 / KirikiriZ, and the bundled libraries). Kirikiroid2 is BSD-style. Its Kodi-derived video player may ship (Eikon is GPL-3.0-or-later). The Android-only AmazeFileManager storage code (GPL-3.0) is left out. Credit everything.
 - iOS host layer: rendering (Kirikiroid2's Android renderer is GL-based. **Open decision:** OpenGL ES on iOS, which is deprecated but present, vs a Metal backend or a translation layer), audio, video playback, file access to the game folder, and lifecycle (pause on background).
 - Implement 02's runtime interface for this route.

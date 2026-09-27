@@ -9,12 +9,12 @@ stub = echo "$@: not implemented yet (section $(1))" >&2; exit 1
 
 .PHONY: help doctor bootstrap version generated project check \
 	test test-swift test-scripts archive ipa tipa deb package verify all \
-	publish apply-patches unpatch clean
+	publish fetch-deps verify-deps pin-dep clean
 
 help:
 	@echo "Targets: doctor bootstrap version generated project check test test-swift"
 	@echo "         test-scripts archive ipa tipa deb package verify all publish"
-	@echo "         apply-patches unpatch clean"
+	@echo "         fetch-deps verify-deps pin-dep NAME=<name> TAG=<tag> [ASSET=<asset>] clean"
 
 doctor:
 	@scripts/doctor.sh
@@ -43,6 +43,7 @@ check:
 	else \
 		echo "check: skipping credits check, scripts/credits.py not added yet (section 04)"; \
 	fi
+	@uv run scripts/deps.py check
 	@scripts/version.sh --check
 
 test: test-swift test-scripts
@@ -70,11 +71,16 @@ all: check test archive package verify
 publish:
 	@$(call stub,11)
 
-apply-patches:
-	@uv run scripts/apply_patches.py apply
+# Prebuilt libraries from the forks' GitHub releases (see third_party/README.md).
+fetch-deps:
+	@uv run scripts/deps.py fetch
 
-unpatch:
-	@uv run scripts/apply_patches.py restore
+verify-deps:
+	@uv run scripts/deps.py verify
+
+pin-dep:
+	@test -n "$(NAME)" -a -n "$(TAG)" || { echo "usage: make pin-dep NAME=<name> TAG=<tag> [ASSET=<asset>]" >&2; exit 1; }
+	@uv run scripts/deps.py pin "$(NAME)" --tag "$(TAG)" $(if $(ASSET),--asset "$(ASSET)")
 
 clean:
 	rm -rf build dist

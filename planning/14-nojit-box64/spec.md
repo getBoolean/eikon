@@ -13,7 +13,7 @@ Let Eikon run 32-bit Windows games when the process has no usable JIT: always on
 ## Scope
 
 **In:**
-- Box64 as a submodule at a tag, with changes as patch files. Build its WoW64 DLL with the interpreter only (no dynarec in the default path).
+- Box64 as a fork starting from a tag, with changes as commits on the fork's `eikon` branch. The fork publishes its builds as GitHub releases, and Eikon pins them in `third_party/deps.toml`. Build its WoW64 DLL with the interpreter only (no dynarec in the default path).
 - **Guest window in Box64:** the interpreter adds B to every 32-bit memory access, meeting 07's contract. Box64's 32-bit support assumes the low 4 GB today.
 - **Signed Mach-O Wine:** Wine's ARM64 PE DLLs normally load as PE files mapped executable, which needs JIT. Build Wine's modules and Box64's DLL as Mach-O images that the loader links in or maps as signed code, while keeping the PE semantics Wine needs (exports, relocations, TLS, and the loader's module list). Neither project does this today. This is the core research item. Include how 06's x18 patching works when modules are signed and can't be patched.
 - **Graphics layers:** 32-bit graphics layers built for i386 would be interpreted and very slow. Prefer ARM64-native layers with WoW64 thunks (coordinate with 08's decision).

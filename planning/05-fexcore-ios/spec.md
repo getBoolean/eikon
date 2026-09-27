@@ -13,7 +13,7 @@ Port FEXCore (FEX-Emu, tag `FEX-2609`) to Darwin so it translates x86 code to AR
 ## Scope
 
 **In:**
-- FEX as a submodule at `FEX-2609`, with Darwin/iOS changes as patch files. Build FEXCore as a library for iOS arm64 and for macOS arm64.
+- FEX as a fork starting from `FEX-2609`, with Darwin/iOS changes as commits on the fork's `eikon` branch. The fork builds FEXCore and publishes it as GitHub releases, and Eikon pins them in `third_party/deps.toml`. Build FEXCore as a library for iOS arm64 and for macOS arm64.
 - Darwin port of the core:
   - memory allocation and address-space management without Linux calls
   - **16 KB host pages**, where FEX assumes 4 KB. Decide how guest 4 KB page semantics (protection, mapping granularity) are emulated or approximated. This is a known risk: on Asahi Linux, FEX only runs inside a 4 KB VM, and iOS has none.
