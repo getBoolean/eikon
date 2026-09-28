@@ -1,10 +1,10 @@
 {
   "app": {
-    "build": "33",
+    "build": "51",
     "bundleIdentifier": "com.getboolean.eikon",
-    "commit": "2ba5992",
+    "commit": "0bc7f95",
     "packageKind": "ipa",
-    "version": "0.2.0"
+    "version": "0.2.3"
   },
   "device": {
     "chip": "M2",
@@ -12,24 +12,25 @@
     "modelIdentifier": "iPad14,5"
   },
   "gates": {},
-  "generatedAt": "2026-09-28T08:18:13Z",
+  "generatedAt": "2026-09-28T10:03:43Z",
   "install": {
     "evidence": {
       "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
       "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
       "markers": [
-        ".installed_dopamine"
+        ".installed_dopamine",
+        "container-required"
       ]
     },
-    "method": "unknown"
+    "method": "trollStore"
   },
   "jit": {
     "csDebugged": true,
-    "csDebuggedSeen": "onForeground",
+    "csDebuggedSeen": "afterTrollStoreRequest",
     "probe": {
       "kind": "passed"
     },
-    "source": "unknown",
+    "source": "trollStore",
     "txm": {
       "basis": "os below 26",
       "enforced": false,
@@ -38,8 +39,9 @@
     "usable": true
   },
   "memory": {
-    "availableBytes": 8566814912
+    "availableBytes": 8568125504
   },
+  "notes": "TrollStore install, tap launch, Dopamine app JIT off. JIT came from the automatic enable-jit request.",
   "os": {
     "build": "21A329",
     "name": "iPadOS",
