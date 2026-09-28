@@ -35,11 +35,11 @@ The main targets:
 - `check`: the credits and version checks
 - `test`: the Swift tests and the script tests
 - `archive`: build the app archive
-- `package`: package it as `.ipa`, `.tipa` and `.deb` in `dist/`
+- `package`: package it as `.ipa` and `.deb` in `dist/`
 - `verify`: check the packaged artifacts
 - `clean`: remove `build/` and `dist/`
 
-`make all` builds one app binary and packages it three ways.
+`make all` builds one app binary and packages it two ways.
 
 `make doctor` checks the toolchain. `make bootstrap` installs missing tools; run it only when you choose to.
 
@@ -74,10 +74,10 @@ process handle SIGBUS SIGSEGV SIGILL SIGTRAP -s false -n false
 
 ## Install methods and artifacts
 
-- **Dopamine rootless deb** (`com.getboolean.eikon.rootless`, `iphoneos-arm64`), installed at `/var/jb/Applications/Eikon.app`. Supported on Dopamine 2, for iOS 15.0–16.6.1. Needs no Developer Mode.
+- **Dopamine rootless deb** (`com.getboolean.eikon.rootless`, `iphoneos-arm64`), installed at `/var/jb/Applications/Eikon.app`. For Dopamine; verified on iPadOS 17.0. Needs no Developer Mode. It replaces the old `com.getboolean.eikon` deb from 0.1.0.
 - **`Eikon.ipa`** (`com.getboolean.eikon`) for **AltStore or TrollStore**:
   - With **AltStore**: it re-signs the ipa with the developer profile's entitlements, replacing the ones in the ipa, and may rewrite the bundle id.
-  - With **TrollStore**: it installs the ipa as-is, keeping its entitlements. "Open with JIT" or the enable-JIT feature grants JIT.
+  - With **TrollStore**: it re-signs the ipa, keeping its entitlements and adding `container-required`, which is how Eikon recognises the install. Enable "URL Scheme" in TrollStore's settings so Eikon can ask it for JIT.
   - On iOS 16 and later, **Developer Mode must be on**: the ipa carries `get-task-allow`.
 
 The deb and the ipa use **different bundle ids** so a Dopamine install and a TrollStore-installed ipa can coexist. Both carry the same binary, signed with their own entitlements (`packaging/entitlements/`); `make verify` checks that.
@@ -85,8 +85,8 @@ The deb and the ipa use **different bundle ids** so a Dopamine install and a Tro
 ## JIT
 
 - Dopamine grants JIT automatically when its “Allow JIT in Apps” setting is on.
-- On TrollStore 2.0.12 or later, the app asks TrollStore once to enable JIT, and TrollStore returns to the app.
-- On AltStore, the app only detects JIT that an external tool has provided.
+- On TrollStore 2.0.12 or later, with its "URL Scheme" setting on, the app asks TrollStore once to enable JIT, and TrollStore returns to the app.
+- On AltStore, the app only detects JIT that an external tool has provided. On a jailbroken device that includes Dopamine's "Allow JIT in Apps", which gives JIT to every app, whatever installed it.
 - On devices with Apple's Trusted Execution Monitor (iOS 26 and later, on chips that have it), the app reports JIT as not usable. The routes that don't need JIT still work.
 
 The status screen shows whether JIT is usable, where it came from, and a reason when it isn't.

@@ -1,5 +1,18 @@
 # 01 · Build, packaging, and JIT enablement
 
+## Outcome (done 2026-09-28, v0.2.3)
+
+Every "Done when" item is met, with device reports in `device-reports/`. The build differs from the scope below in these ways, all owner decisions or device findings:
+
+- **Two artifacts, not three.** The `.tipa` was dropped: one `.ipa` serves AltStore and TrollStore. The deb's package id is `com.getboolean.eikon.rootless`, so it can sit next to the ipa's `com.getboolean.eikon`.
+- **No submodules.** Upstreams come from fork releases pinned in `third_party/deps.toml`.
+- **No `no-sandbox`.** On TrollStore it got the app killed at exec. Both packages run sandboxed. The deb carries `container-required` for its own id to get a normal data container.
+- **TrollStore detection reads entitlements, not the `_TrollStore` file.** TrollStore re-signs the ipa with `container-required` set to its bundle id. The marker file was never visible on the test iPad.
+- **TXM comes from a CPU-family table only.** The firmware read in `/private/preboot` needed an unsandboxed process.
+- **Dopamine was tested on iPadOS 17.0**, not Dopamine 2 on iOS 15–16.
+
+The rest of this file is the original spec.
+
 ## Purpose
 
 Create the Eikon project from nothing. The result builds one source tree, as one app binary at one version, into three installable artifacts, signs each so it loads under its install method, turns JIT on automatically where the install method allows it, and reports whether the running process has JIT. Every later split builds on this.

@@ -19,13 +19,13 @@ END_MANIFEST -->
 
 Source: `planning/requirements.md` (which wins over everything else) and `planning/deep_project_interview.md`. The old stage plans in `planning/old-stages/` are not inputs.
 
-The repo has no app code yet. Split 01 creates the project.
+Split 01 created the project and is done (2026-09-28, v0.2.3).
 
 ## Splits
 
 | # | Split | Purpose | Ends with |
 |---|---|---|---|
-| 01 | build-packaging-jit | Build system, one build packaged three ways (deb, `.tipa`, `.ipa`), signing and entitlements, automatic JIT on Dopamine and TrollStore, JIT detection, license, credits pipeline, publishing to `eikon-source` | An empty app that installs on all three methods and reports whether it has JIT |
+| 01 | build-packaging-jit | Build system, one build packaged two ways (deb, `.ipa` for AltStore and TrollStore), signing and entitlements, automatic JIT on Dopamine and TrollStore, JIT detection, license, credits pipeline, publishing to `eikon-source` | An empty app that installs on all three methods and reports whether it has JIT. **Done 2026-09-28.** |
 | 02 | app-shell | Game library, import, engine detection and hashing by main executable or archive, the route picker (with its reasons), per-game settings, the capability screen, the in-app credits | The library recognizes an engine and shows a route for original test content |
 | 03 | native-kirikiri | An iOS port of Kirikiroid2 (xp3, KAG, audio, video), with a license audit, and a hand-off to Wine for games it can't run (`.tpm` plugins, encryption) | An original `.xp3` test game runs on a device |
 | 04 | input | A shared input layer: touch controls that act as mouse and keyboard, hardware keyboards, controllers, Japanese text entry | Input reaches native Kirikiri, and there's an interface ready for Wine and Linux |

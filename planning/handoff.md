@@ -1,5 +1,7 @@
 # Eikon handoff
 
+> **Historical, from before split 01.** Its account of the repos, the Sileo source and the local trees is out of date: `eikon-source` is served through GitHub Pages, and upstreams come from fork releases, not submodules. See `planning/01-build-packaging-jit/handoff.md` for the current state.
+
 Eikon is an unfinished prototype. It is not a working emulator. Nothing here runs a game on a device. There is no JIT bypass, no exploit, and no commercial games.
 
 Said “AY-kon.” From Greek *eikon*, a likeness. The name is not a jailbreak tool and not a SpringBoard tweak.

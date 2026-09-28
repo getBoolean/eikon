@@ -22,11 +22,18 @@ TrollStore-installed ipa can coexist; the ipa keeps `com.getboolean.eikon`.
 | `com.apple.developer.kernel.extended-virtual-addressing` | ✓ | ✓ | Allows a larger virtual address space. Also a public App ID capability. |
 | `com.apple.private.memorystatus` | ✓ | ✓ | Adjusts the memorystatus (jetsam) limits. A private key AltStore can't grant; it drops it when re-signing the ipa. |
 
+## Verified on device (2026-09-28)
+
+From the reports in `device-reports/`:
+
+- AltStore installed the ipa, with all of these keys embedded, on iPadOS 17.0 and iOS 27.0. It didn't reject the private `memorystatus` key.
+- TrollStore re-signs the ipa with `container-required` set to `com.getboolean.eikon`, and Eikon detects the install from that. The `_TrollStore` marker file was never visible on the test iPad, so detection doesn't use it.
+- The deb, sandboxed with `container-required`, writes its data container and passes the JIT probe under Dopamine.
+
 ## Unverified
 
-- Whether the two `com.apple.developer.kernel.*` memory keys have any effect under Dopamine's ad-hoc signing. Evidence: the device report's `memory.availableBytes`.
-- Whether an AltStore **free** team can be granted `increased-memory-limit` and `extended-virtual-addressing`. Evidence: the first ipa install. If a free team can't be granted a capability and the install fails, drop that key from `ipa.plist` and note it here.
-- Whether a TrollStore-installed ipa is detected as `trollStore` and gets JIT from "Open with JIT". Evidence: a device report from that install.
+- Whether the two `com.apple.developer.kernel.*` memory keys have any effect. On the M2 iPad, `memory.availableBytes` was about 8.57 GB on every install method, so the reports don't show a difference.
+- Whether an AltStore **free** team can be granted `increased-memory-limit` and `extended-virtual-addressing`. The reports don't record the account type. If a free team can't be granted a capability and the install fails, drop that key from `ipa.plist` and note it here.
 
 Later splits add rows here: section 08 for the memory evidence, sections 05 and 07 for address space.
 
