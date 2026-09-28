@@ -2,14 +2,20 @@ import Foundation
 import Testing
 @testable import EikonKit
 
-/// A filesystem layout for detection tests: a set of paths that exist, and
-/// symlink prefixes that `resolvingSymlinks` rewrites.
+/// A filesystem layout for detection tests: a set of paths that exist,
+/// symlink prefixes that `resolvingSymlinks` rewrites, and the signed entitlements.
 struct FakeBundleEnvironment: BundleEnvironment {
     var bundleURL: URL
     var homeDirectory: URL
+    var bundleIdentifier = "com.getboolean.eikon"
     var isSimulator = false
     var existing: Set<String> = []
     var symlinks: [String: String] = [:]
+    var entitlements: [String: String] = [:]
+
+    func entitlementString(_ key: String) -> String? {
+        entitlements[key]
+    }
 
     func fileExists(_ path: String) -> Bool {
         existing.contains(URL(fileURLWithPath: path).standardizedFileURL.path)
@@ -33,30 +39,51 @@ private let dataUUID = UUID().uuidString
 private let containerDir = "/private/var/containers/Bundle/Application/\(bundleUUID)"
 private let dataHome = URL(fileURLWithPath: "/private/var/mobile/Containers/Data/Application/\(dataUUID)")
 
-private func containerLayout(with markers: [String]) -> FakeBundleEnvironment {
+private let containerRequired = "com.apple.private.security.container-required"
+private let customTrust = "jb.pmap_cs.custom_trust"
+
+private func containerLayout(with markers: [String],
+                             entitlements: [String: String] = [:]) -> FakeBundleEnvironment {
     FakeBundleEnvironment(
         bundleURL: URL(fileURLWithPath: "\(containerDir)/Eikon.app"),
         homeDirectory: dataHome,
-        existing: Set(markers.map { "\(containerDir)/\($0)" })
+        existing: Set(markers.map { "\(containerDir)/\($0)" }),
+        entitlements: entitlements
     )
 }
 
-private func jailbreakLayout(with markers: [String], root: String = dopamineRoot) -> FakeBundleEnvironment {
+private func jailbreakLayout(with markers: [String], root: String = dopamineRoot,
+                             entitlements: [String: String] = [:]) -> FakeBundleEnvironment {
     FakeBundleEnvironment(
         bundleURL: URL(fileURLWithPath: "/var/jb/Applications/Eikon.app"),
         homeDirectory: URL(fileURLWithPath: "/var/mobile"),
+        bundleIdentifier: "com.getboolean.eikon.rootless",
         existing: Set(markers),
-        symlinks: ["/var/jb": root]
+        symlinks: ["/var/jb": root],
+        entitlements: entitlements
     )
 }
 
 @Test(arguments: [
-    (["_TrollStore"], InstallMethod.trollStore),
-    (["_TrollStoreLite"], InstallMethod.trollStoreLite),
-    (["_TrollStore", "Eikon.app/embedded.mobileprovision"], InstallMethod.trollStore),
+    ([containerRequired: "com.getboolean.eikon"], InstallMethod.trollStore),
+    ([customTrust: "PMAP_CS_APP_STORE"], InstallMethod.trollStoreLite),
+    ([containerRequired: "com.example.other"], InstallMethod.unknown),
+    ([customTrust: "something else"], InstallMethod.unknown),
 ])
-func trollStoreMarkers(markers: [String], expected: InstallMethod) {
-    #expect(detectInstallMethod(containerLayout(with: markers)).0 == expected)
+func trollStoreSigningEntitlements(entitlements: [String: String], expected: InstallMethod) {
+    #expect(detectInstallMethod(containerLayout(with: [], entitlements: entitlements)).0 == expected)
+}
+
+@Test func trollStoreSigningOutranksAProvisioningProfile() {
+    let layout = containerLayout(with: ["Eikon.app/embedded.mobileprovision"],
+                                 entitlements: [containerRequired: "com.getboolean.eikon"])
+    #expect(detectInstallMethod(layout).0 == .trollStore)
+}
+
+@Test func debWithItsOwnContainerEntitlementIsStillDopamine() {
+    let layout = jailbreakLayout(with: ["/var/jb/.installed_dopamine"],
+                                 entitlements: [containerRequired: "com.getboolean.eikon.rootless"])
+    #expect(detectInstallMethod(layout).0 == .dopamine)
 }
 
 @Test func jailbreakLayouts() {

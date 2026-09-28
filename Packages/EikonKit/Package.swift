@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "EikonKit", targets: ["EikonKit"]),
     ],
     targets: [
-        .target(name: "CEikonJIT"),
+        .target(name: "CEikonJIT", linkerSettings: [.linkedFramework("Security")]),
         .target(name: "EikonKit", dependencies: ["CEikonJIT"]),
         .testTarget(name: "EikonKitTests", dependencies: ["EikonKit", "CEikonJIT"]),
     ],

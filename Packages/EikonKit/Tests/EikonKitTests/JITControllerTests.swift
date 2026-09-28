@@ -101,11 +101,11 @@ private struct ControllerHarness {
             .appendingPathComponent("jit-controller-\(UUID().uuidString)", isDirectory: true)
 
         let bundleURL = URL(fileURLWithPath: "/private/var/containers/Bundle/Application/EIKONTEST/Eikon.app")
-        let marker = bundleURL.deletingLastPathComponent().appendingPathComponent("_TrollStore").path
         let environment = FakeBundleEnvironment(
             bundleURL: bundleURL,
             homeDirectory: URL(fileURLWithPath: "/private/var/mobile/Containers/Data/Application/EIKONDATA"),
-            existing: [URL(fileURLWithPath: marker).standardizedFileURL.path]
+            bundleIdentifier: bundleID,
+            entitlements: ["com.apple.private.security.container-required": bundleID]
         )
         let sentinel = ProbeSentinel(directory: sentinelDirectory, buildNumber: "1")
         let system = system

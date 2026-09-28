@@ -23,7 +23,7 @@
     "evidence": {
       "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
       "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
-      "markers": ["_TrollStore"]
+      "markers": ["container-required"]
     },
     "method": "trollStore"
   },

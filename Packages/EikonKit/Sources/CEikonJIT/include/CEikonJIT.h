@@ -28,4 +28,8 @@ typedef struct {
 /* MUST only be called when JITPolicy.mayProbe is true. */
 eikon_probe_result eikon_jit_probe(void);
 
+/* This process's signed entitlement `key` when it is a string, else NULL.
+   The caller frees the result. */
+char *eikon_copy_entitlement_string(const char *key);
+
 #endif /* CEIKONJIT_H */

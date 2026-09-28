@@ -20,7 +20,7 @@ private struct FixedDeviceSystem: DeviceSystem {
         installMethod: .trollStore,
         evidence: InstallEvidence(bundlePath: "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
                                   homeDirectory: "/var/mobile/Containers/Data/Application/<uuid>",
-                                  markers: ["_TrollStore"]),
+                                  markers: ["container-required"]),
         jit: JITStatus(csDebugged: true, csDebuggedSeen: .afterTrollStoreRequest,
                        txm: TXMInfo(state: .absent, enforced: false, basis: "os below 26"),
                        probe: ProbeOutcome(kind: .passed, detail: nil),

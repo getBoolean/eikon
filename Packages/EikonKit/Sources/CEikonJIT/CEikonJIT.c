@@ -1,10 +1,12 @@
 #include "CEikonJIT.h"
 
+#include <CoreFoundation/CoreFoundation.h>
 #include <errno.h>
 #include <mach/mach.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -246,5 +248,31 @@ cleanup:
     probe_rx_base = 0;
     probe_length = 0;
     pthread_mutex_unlock(&probe_lock);
+    return result;
+}
+
+/* Security.framework exports these on iOS, but the SDK has no header for them. */
+typedef struct __SecTask *SecTaskRef;
+extern SecTaskRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
+extern CFTypeRef SecTaskCopyValueForEntitlement(SecTaskRef task, CFStringRef entitlement, CFErrorRef *error);
+
+char *eikon_copy_entitlement_string(const char *key) {
+    SecTaskRef task = SecTaskCreateFromSelf(kCFAllocatorDefault);
+    if (task == NULL) return NULL;
+
+    char *result = NULL;
+    CFStringRef name = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
+    CFTypeRef value = name ? SecTaskCopyValueForEntitlement(task, name, NULL) : NULL;
+    if (value != NULL && CFGetTypeID(value) == CFStringGetTypeID()) {
+        CFIndex size = CFStringGetMaximumSizeForEncoding(CFStringGetLength(value), kCFStringEncodingUTF8) + 1;
+        result = malloc((size_t)size);
+        if (result != NULL && !CFStringGetCString(value, result, size, kCFStringEncodingUTF8)) {
+            free(result);
+            result = NULL;
+        }
+    }
+    if (value != NULL) CFRelease(value);
+    if (name != NULL) CFRelease(name);
+    CFRelease(task);
     return result;
 }

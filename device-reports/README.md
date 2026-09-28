@@ -18,7 +18,7 @@ reports describe what users actually install. `<v>` is the released version.
 
 ### TrollStore (the `.ipa`, not a separate tipa)
 1. With Developer Mode on, install `Eikon-<v>.ipa` **with TrollStore** and launch it.
-2. Record the **Detected method** and **Bundle ID** on the status screen. We expect `trollStore`; the report confirms what markers TrollStore leaves for an ipa install.
+2. Record the **Detected method** and **Bundle ID** on the status screen. We expect `trollStore`, with the `container-required` marker: detection reads the entitlement TrollStore adds when it re-signs the ipa.
 3. Use TrollStore's **"Open with JIT"** (or the enable-JIT flow) and relaunch. Expect **usable**. File the report.
 4. Launch normally (without Open with JIT). If it's not usable, note the reason; press **Retry JIT** and see whether TrollStore's enable-JIT URL grants it.
 5. Turn Developer Mode off and try to launch. Record what happens: a TrollStore warning, a launch refusal, or a launch without JIT.
