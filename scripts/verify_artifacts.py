@@ -28,6 +28,7 @@ FORBIDDEN = [
     "com.apple.private.skip-library-validation",
     "com.apple.private.persona-mgmt",
     "platform-application",
+    "com.apple.private.security.no-sandbox",
 ]
 
 MH_MAGIC_64 = 0xFEEDFACF

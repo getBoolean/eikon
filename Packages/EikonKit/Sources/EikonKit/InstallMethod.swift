@@ -9,7 +9,7 @@ public enum InstallMethod: String, Codable, Sendable, CaseIterable {
 public struct InstallEvidence: Codable, Sendable, Equatable {
     /// The resolved bundle path, reduced to its structure.
     public var bundlePath: String
-    /// The home directory, reduced to its structure. It shows where unsandboxed data lands.
+    /// The home directory, reduced to its structure. It shows which data container is in use.
     public var homeDirectory: String
     /// Names of the markers that were found, decisive or not.
     public var markers: [String]

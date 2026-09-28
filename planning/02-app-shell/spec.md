@@ -13,7 +13,7 @@ The app the user sees: a game library, detection of each game's engine and archi
 ## Scope
 
 **In:**
-- **Import:** bring game folders into the app, or reference them (Files app, document picker, and direct paths where the unsandboxed builds allow). Decide where game data lives per install method.
+- **Import:** bring game folders into the app, or reference them (Files app and document picker; every build is sandboxed). Decide where game data lives per install method.
 - **Identity:** a hash of the main executable or main archive (such as `Game.exe` or `data.xp3`) keys everything: settings, saves, FEX overrides, the glossary. The display name is whatever the user chooses. Nothing logs or exports titles.
 - **Detection:**
   - Unity (`UnityPlayer.dll`, plus `GameAssembly.dll` for IL2CPP)
