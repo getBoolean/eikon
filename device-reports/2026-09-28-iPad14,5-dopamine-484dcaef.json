@@ -1,0 +1,50 @@
+{
+  "app": {
+    "build": "47",
+    "bundleIdentifier": "com.getboolean.eikon.rootless",
+    "commit": "ae51c38",
+    "packageKind": "deb",
+    "version": "0.2.2"
+  },
+  "device": {
+    "chip": "M2",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPad14,5"
+  },
+  "gates": {},
+  "generatedAt": "2026-09-28T09:43:11Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/preboot/<hash>/dopamine-<id>/procursus/Applications/Eikon.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": [
+        ".installed_dopamine",
+        "basebin"
+      ]
+    },
+    "method": "dopamine"
+  },
+  "jit": {
+    "csDebugged": true,
+    "csDebuggedSeen": "atLaunch",
+    "probe": {
+      "kind": "passed"
+    },
+    "source": "dopamine",
+    "txm": {
+      "basis": "os below 26",
+      "enforced": false,
+      "state": "absent"
+    },
+    "usable": true
+  },
+  "memory": {
+    "availableBytes": 8569764032
+  },
+  "os": {
+    "build": "21A329",
+    "name": "iPadOS",
+    "version": "17.0"
+  },
+  "schemaVersion": 1
+}
