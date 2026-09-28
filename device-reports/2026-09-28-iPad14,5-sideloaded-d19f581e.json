@@ -1,0 +1,52 @@
+{
+  "app": {
+    "build": "33",
+    "bundleIdentifier": "com.getboolean.eikon.ANL5UN4557",
+    "commit": "2ba5992",
+    "packageKind": "ipa",
+    "version": "0.2.0"
+  },
+  "device": {
+    "chip": "M2",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPad14,5"
+  },
+  "gates": {},
+  "generatedAt": "2026-09-28T08:19:27Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/App.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": [
+        ".installed_dopamine",
+        "embedded.mobileprovision"
+      ]
+    },
+    "method": "sideloaded"
+  },
+  "jit": {
+    "csDebugged": false,
+    "csDebuggedSeen": "never",
+    "probe": {
+      "detail": "no CS_DEBUGGED",
+      "kind": "notRun"
+    },
+    "reason": "sideloadedNoJIT",
+    "source": "none",
+    "txm": {
+      "basis": "os below 26",
+      "enforced": false,
+      "state": "absent"
+    },
+    "usable": false
+  },
+  "memory": {
+    "availableBytes": 8569305152
+  },
+  "os": {
+    "build": "21A329",
+    "name": "iPadOS",
+    "version": "17.0"
+  },
+  "schemaVersion": 1
+}
