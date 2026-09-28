@@ -1,0 +1,51 @@
+{
+  "app": {
+    "build": "33",
+    "bundleIdentifier": "com.getboolean.eikon.9Y6M9SL233",
+    "commit": "2ba5992",
+    "packageKind": "ipa",
+    "version": "0.2.0"
+  },
+  "device": {
+    "chip": "A15",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPhone14,4"
+  },
+  "gates": {},
+  "generatedAt": "2026-09-28T08:35:35Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/App.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": [
+        "embedded.mobileprovision"
+      ]
+    },
+    "method": "sideloaded"
+  },
+  "jit": {
+    "csDebugged": false,
+    "csDebuggedSeen": "never",
+    "probe": {
+      "detail": "TXM",
+      "kind": "notRun"
+    },
+    "reason": "txmEnforced",
+    "source": "none",
+    "txm": {
+      "basis": "cpufamily heuristic",
+      "enforced": true,
+      "state": "present"
+    },
+    "usable": false
+  },
+  "memory": {
+    "availableBytes": 2440575232
+  },
+  "os": {
+    "build": "24A437",
+    "name": "iOS",
+    "version": "27.0"
+  },
+  "schemaVersion": 1
+}
