@@ -1,0 +1,51 @@
+{
+  "app": {
+    "build": "33",
+    "bundleIdentifier": "com.getboolean.eikon",
+    "commit": "2ba5992",
+    "packageKind": "ipa",
+    "version": "0.2.0"
+  },
+  "device": {
+    "chip": "M2",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPad14,5"
+  },
+  "gates": {},
+  "generatedAt": "2026-09-28T08:17:53Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": [
+        ".installed_dopamine"
+      ]
+    },
+    "method": "unknown"
+  },
+  "jit": {
+    "csDebugged": false,
+    "csDebuggedSeen": "never",
+    "probe": {
+      "detail": "no CS_DEBUGGED",
+      "kind": "notRun"
+    },
+    "reason": "unknownInstallNoJIT",
+    "source": "none",
+    "txm": {
+      "basis": "os below 26",
+      "enforced": false,
+      "state": "absent"
+    },
+    "usable": false
+  },
+  "memory": {
+    "availableBytes": 8569813184
+  },
+  "os": {
+    "build": "21A329",
+    "name": "iPadOS",
+    "version": "17.0"
+  },
+  "schemaVersion": 1
+}
