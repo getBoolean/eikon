@@ -40,7 +40,7 @@ If Dopamine 3 can't run on this device, write that down; the deb is then desktop
 ## iPhone 13 mini (A15), iOS 27.0
 
 ### AltStore
-1. Install `Eikon-<v>.ipa` with AltStore. **This is the key check for 0.2.0:** the ipa now embeds two private entitlements it didn't in 0.1.0 (`com.apple.private.security.no-sandbox`, `com.apple.private.memorystatus`). AltStore is expected to drop them when it re-signs, but if it validates and **rejects** them the install fails. If it does, drop those two keys from `packaging/entitlements/ipa.plist` and cut a new version.
+1. Install `Eikon-<v>.ipa` with AltStore. The ipa embeds one private entitlement (`com.apple.private.memorystatus`). AltStore is expected to drop it when it re-signs, but if it validates and **rejects** it the install fails. If it does, drop that key from `packaging/entitlements/ipa.plist` and cut a new version.
 2. Record any capability errors for `increased-memory-limit` or `extended-virtual-addressing`, and whether the install succeeds.
 3. Launch. Expect **not usable**, reason `txmEnforced`, with or without an external JIT enabler — this device has Apple's Trusted Execution Monitor.
 4. File the report.
