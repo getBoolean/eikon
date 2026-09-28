@@ -1,0 +1,50 @@
+{
+  "app": {
+    "build": "47",
+    "bundleIdentifier": "com.getboolean.eikon",
+    "commit": "ae51c38",
+    "packageKind": "ipa",
+    "version": "0.2.2"
+  },
+  "device": {
+    "chip": "M2",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPad14,5"
+  },
+  "gates": {},
+  "generatedAt": "2026-09-28T09:47:24Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": [
+        ".installed_dopamine"
+      ]
+    },
+    "method": "unknown"
+  },
+  "jit": {
+    "csDebugged": true,
+    "csDebuggedSeen": "onForeground",
+    "probe": {
+      "kind": "passed"
+    },
+    "source": "unknown",
+    "txm": {
+      "basis": "os below 26",
+      "enforced": false,
+      "state": "absent"
+    },
+    "usable": true
+  },
+  "memory": {
+    "availableBytes": 8567535808
+  },
+  "notes": "TrollStore install, launched with TrollStore's Open with JIT, Dopamine app JIT off.",
+  "os": {
+    "build": "21A329",
+    "name": "iPadOS",
+    "version": "17.0"
+  },
+  "schemaVersion": 1
+}

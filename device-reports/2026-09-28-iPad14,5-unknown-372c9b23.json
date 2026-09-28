@@ -1,0 +1,52 @@
+{
+  "app": {
+    "build": "47",
+    "bundleIdentifier": "com.getboolean.eikon",
+    "commit": "ae51c38",
+    "packageKind": "ipa",
+    "version": "0.2.2"
+  },
+  "device": {
+    "chip": "M2",
+    "cpuFamily": "0xda33d83d",
+    "modelIdentifier": "iPad14,5"
+  },
+  "gates": {},
+  "generatedAt": "2026-09-28T09:47:11Z",
+  "install": {
+    "evidence": {
+      "bundlePath": "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",
+      "homeDirectory": "/var/mobile/Containers/Data/Application/<uuid>",
+      "markers": [
+        ".installed_dopamine"
+      ]
+    },
+    "method": "unknown"
+  },
+  "jit": {
+    "csDebugged": false,
+    "csDebuggedSeen": "never",
+    "probe": {
+      "detail": "no CS_DEBUGGED",
+      "kind": "notRun"
+    },
+    "reason": "unknownInstallNoJIT",
+    "source": "none",
+    "txm": {
+      "basis": "os below 26",
+      "enforced": false,
+      "state": "absent"
+    },
+    "usable": false
+  },
+  "memory": {
+    "availableBytes": 8567994560
+  },
+  "notes": "TrollStore install, tap launch, Dopamine app JIT off. No TrollStore marker detected, so no enable-jit request.",
+  "os": {
+    "build": "21A329",
+    "name": "iPadOS",
+    "version": "17.0"
+  },
+  "schemaVersion": 1
+}
