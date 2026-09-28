@@ -77,8 +77,8 @@ private let notRun = ProbeOutcome(kind: .notRun, detail: "test")
 
 @Test func unknownCPUFamiliesAreConservative() {
     let unlisted: UInt32 = 0xDEAD_BEEF
-    #expect(JITPolicy.txmInfo(firmware: -1, osMajor: 26, cpuFamily: unlisted).enforced)
-    #expect(!JITPolicy.txmInfo(firmware: -1, osMajor: 25, cpuFamily: unlisted).enforced)
+    #expect(JITPolicy.txmInfo(osMajor: 26, cpuFamily: unlisted).enforced)
+    #expect(!JITPolicy.txmInfo(osMajor: 25, cpuFamily: unlisted).enforced)
 }
 
 @Test func probeOutcomeAndStatusRoundTrip() throws {

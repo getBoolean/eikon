@@ -28,7 +28,4 @@ typedef struct {
 /* MUST only be called when JITPolicy.mayProbe is true. */
 eikon_probe_result eikon_jit_probe(void);
 
-/* 1 present, 0 absent, -1 undeterminable. */
-int eikon_txm_firmware_present(void);
-
 #endif /* CEIKONJIT_H */

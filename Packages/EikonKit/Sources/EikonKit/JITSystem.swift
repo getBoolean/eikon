@@ -21,11 +21,7 @@ public struct LiveJITSystem: JITSystem {
         #if targetEnvironment(simulator)
         return TXMInfo(state: .absent, enforced: false, basis: "simulator")
         #else
-        return JITPolicy.txmInfo(
-            firmware: Int32(eikon_txm_firmware_present()),
-            osMajor: osMajor,
-            cpuFamily: cpuFamily
-        )
+        return JITPolicy.txmInfo(osMajor: osMajor, cpuFamily: cpuFamily)
         #endif
     }
 

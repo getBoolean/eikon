@@ -1,13 +1,10 @@
 #include "CEikonJIT.h"
 
-#include <dirent.h>
 #include <errno.h>
-#include <limits.h>
 #include <mach/mach.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <signal.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -250,45 +247,4 @@ cleanup:
     probe_length = 0;
     pthread_mutex_unlock(&probe_lock);
     return result;
-}
-
-int eikon_txm_firmware_present(void) {
-    DIR *preboot = opendir("/private/preboot");
-    if (preboot == NULL) return -1;
-
-    int found = 0;
-    int confirmed_absent = 0;
-    struct dirent *entry;
-    while ((entry = readdir(preboot)) != NULL) {
-        if (entry->d_name[0] == '.') continue;
-
-        char directory[PATH_MAX];
-        int length = snprintf(directory, sizeof directory, "/private/preboot/%s/usr/standalone/firmware/FUD",
-                              entry->d_name);
-        if (length < 0 || (size_t)length >= sizeof directory) continue;
-
-        DIR *firmware = opendir(directory);
-        if (firmware == NULL) continue;
-
-        int saw_image = 0;
-        struct dirent *child;
-        while ((child = readdir(firmware)) != NULL) {
-            if (strcmp(child->d_name, "Ap,TrustedExecutionMonitor.img4") == 0) {
-                saw_image = 1;
-                break;
-            }
-        }
-        closedir(firmware);
-
-        if (saw_image) {
-            found = 1;
-            break;
-        }
-        confirmed_absent = 1;
-    }
-    closedir(preboot);
-
-    if (found) return 1;
-    if (confirmed_absent) return 0;
-    return -1;
 }
