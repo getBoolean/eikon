@@ -29,7 +29,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PAGES_BASE = "https://getboolean.github.io/eikon-source/"
 GITHUB_BASE = "https://github.com/getBoolean/eikon"
-PACKAGE = "com.getboolean.eikon"
+PACKAGE = "com.getboolean.eikon.rootless"
 ARCH = "iphoneos-arm64"
 PACKAGES_FILES = ("Packages", "Packages.xz", "Packages.zst")
 PLACEHOLDER = re.compile(r"@[A-Z_]+@")

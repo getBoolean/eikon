@@ -30,7 +30,7 @@ def _make_deb(directory: Path, version: str) -> Path:
     debian = stage / "DEBIAN"
     debian.mkdir(parents=True)
     (debian / "control").write_text(
-        "Package: com.getboolean.eikon\n"
+        "Package: com.getboolean.eikon.rootless\n"
         f"Version: {version}\n"
         "Architecture: iphoneos-arm64\n"
         "Name: Eikon\n"
@@ -40,7 +40,7 @@ def _make_deb(directory: Path, version: str) -> Path:
     payload = stage / "var" / "jb" / "Applications" / "Eikon.app"
     payload.mkdir(parents=True)
     (payload / "marker").write_text("payload\n")
-    out = directory / f"com.getboolean.eikon_{version}_iphoneos-arm64.deb"
+    out = directory / f"com.getboolean.eikon.rootless_{version}_iphoneos-arm64.deb"
     subprocess.run(["dpkg-deb", "--root-owner-group", "-b", str(stage), str(out)],
                    check=True, capture_output=True)
     return out

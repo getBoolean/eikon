@@ -43,10 +43,9 @@ version=$(tr -d '[:space:]' <VERSION)
 git tag --points-at HEAD --list "v$version" | grep -q "v$version" || die "HEAD is not tagged v$version"
 scripts/version.sh --check
 
-deb="dist/com.getboolean.eikon_${version}_iphoneos-arm64.deb"
+deb="dist/com.getboolean.eikon.rootless_${version}_iphoneos-arm64.deb"
 ipa="dist/Eikon-$version.ipa"
-tipa="dist/Eikon-$version.tipa"
-for f in "$ipa" "$tipa" "$deb" dist/SHA256SUMS; do
+for f in "$ipa" "$deb" dist/SHA256SUMS; do
 	[ -f "$f" ] || die "missing $f; run make package"
 done
 uv run scripts/verify_artifacts.py dist/
@@ -67,10 +66,10 @@ if gh release view "v$version" --repo "$repo" >/dev/null 2>&1; then
 fi
 
 # 2. Create the release.
-announce "gh release create v$version --repo $repo --title v$version --notes ... $ipa $tipa $deb dist/SHA256SUMS"
+announce "gh release create v$version --repo $repo --title v$version --notes ... $ipa $deb dist/SHA256SUMS"
 if [ "$dry_run" -eq 0 ]; then
 	gh release create "v$version" --repo "$repo" --title "v$version" --notes "$notes" \
-		"$ipa" "$tipa" "$deb" dist/SHA256SUMS
+		"$ipa" "$deb" dist/SHA256SUMS
 fi
 
 # 3. Download the deb back (its hashes go into the index).
@@ -115,11 +114,11 @@ git -C "$clone" add -A
 if [ "$dry_run" -eq 1 ]; then
 	git -C "$clone" status --short
 	git -C "$clone" diff --stat --cached
-	announce "git -C $clone commit -m 'Publish com.getboolean.eikon $version'"
+	announce "git -C $clone commit -m 'Publish the Eikon Sileo index $version'"
 	announce "git -C $clone push origin main"
 	echo "Dry run complete. Nothing was pushed."
 else
-	git -C "$clone" commit -m "Publish com.getboolean.eikon $version"
+	git -C "$clone" commit -m "Publish the Eikon Sileo index $version"
 	announce "git -C $clone push origin main"
 	git -C "$clone" push origin main
 	echo "Published. Sileo source: https://getboolean.github.io/eikon-source/"
