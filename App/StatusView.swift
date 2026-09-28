@@ -430,7 +430,7 @@ private func sampleStatus(usable: Bool, source: JITSource, reason: JITReasonCode
 }
 
 private let sampleApp = AppInfoRows(version: "0.1.0", build: "12", commit: "0123abc",
-                                    packageKind: "tipa", bundleId: "com.example.sample")
+                                    packageKind: "ipa", bundleId: "com.example.sample")
 private let sampleDevice = DeviceRows(model: "iPad14,5", chip: "M2", osVersion: "17.0",
                                       osBuild: "21A329", memory: "4 GB")
 

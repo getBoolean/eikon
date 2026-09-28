@@ -15,7 +15,7 @@ private struct FixedDeviceSystem: DeviceSystem {
 @Test @MainActor func roundTripAndPrivacy() throws {
     let now = Date(timeIntervalSince1970: 1_768_470_030)
     let report = DeviceReport.make(
-        app: AppInfo(version: "0.1.0", build: "12", commit: "0123abc", packageKind: "tipa",
+        app: AppInfo(version: "0.1.0", build: "12", commit: "0123abc", packageKind: "ipa",
                      bundleIdentifier: "com.getboolean.eikon"),
         installMethod: .trollStore,
         evidence: InstallEvidence(bundlePath: "/private/var/containers/Bundle/Application/<uuid>/Eikon.app",

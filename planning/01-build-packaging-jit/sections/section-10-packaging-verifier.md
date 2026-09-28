@@ -313,3 +313,14 @@ Open points recorded in the entitlements README: whether Dopamine honours the me
 The archive's arm64 guard and the verifier's nested-Mach-O checks have nothing to act on in this split (a single flat app bundle); they guard the later splits that add frameworks.
 
 The review trail is in `../implementation/code_review/section-10-*.md`.
+
+---
+
+## Change 2026-09-28: two artifacts, distinct ids
+
+The `.tipa` was dropped (owner decision): TrollStore installs the `.ipa` directly, so a separate tipa is redundant. The pipeline now produces two artifacts:
+
+- `dist/Eikon-<v>.ipa` — AltStore and TrollStore. Its `ipa.plist` carries the TrollStore-friendly set (`no-sandbox`, `get-task-allow`, the kernel memory keys, `memorystatus`); AltStore re-signs and drops them, TrollStore keeps them. Bundle id `com.getboolean.eikon`.
+- `dist/com.getboolean.eikon.rootless_<v>_iphoneos-arm64.deb` — Dopamine. Bundle id `com.getboolean.eikon.rootless`, stamped by `package.sh` (like `EKPackageKind`) so the executable stays byte-identical.
+
+The distinct ids let a Dopamine install and a TrollStore-installed ipa coexist instead of shadowing each other (a same-bundle-id collision shadowed the tipa during v0.1.0 testing). `verify_artifacts.py` now expects exactly the ipa and the deb; the same-binary check compares the two, and holds because it hashes only the non-`__LINKEDIT` segments (`ldid -I` writes the id into the CodeDirectory in `__LINKEDIT`, which the check skips) and the unchanged `LC_UUID`. `entitlements/tipa.plist` was removed. `make all` passes at 0.2.0.

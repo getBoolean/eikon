@@ -3,7 +3,7 @@
     "build": "12",
     "bundleIdentifier": "com.getboolean.eikon",
     "commit": "0123abc",
-    "packageKind": "tipa",
+    "packageKind": "ipa",
     "version": "0.1.0"
   },
   "device": {

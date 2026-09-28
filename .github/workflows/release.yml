@@ -70,12 +70,12 @@ jobs:
           notes=$(cat <<'EOF'
           Eikon ${{ github.ref_name }} — an early prototype that reports whether JIT is usable and shows device status. It does not run anything yet.
 
-          Install: the deb is for Dopamine (rootless); the .tipa is for TrollStore and needs Developer Mode on iOS 16+; the .ipa is for AltStore. Each carries the same binary, signed with its own entitlements.
+          Install: the deb is for Dopamine (rootless); the .ipa is for AltStore, and also installs to TrollStore (needs Developer Mode on iOS 16+). Each carries the same binary, signed with its own entitlements.
           EOF
           )
           # Fails if a release for this tag already exists. Assets are never replaced.
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --notes "$notes" \
-            dist/Eikon-*.ipa dist/Eikon-*.tipa dist/*.deb dist/SHA256SUMS
+            dist/Eikon-*.ipa dist/*.deb dist/SHA256SUMS
 
   publish:
     needs: release
@@ -117,7 +117,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           version=$(tr -d '[:space:]' < eikon/VERSION)
-          deb="com.getboolean.eikon_${version}_iphoneos-arm64.deb"
+          deb="com.getboolean.eikon.rootless_${version}_iphoneos-arm64.deb"
           base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
           url="$base/$deb"
           mkdir -p work
@@ -149,6 +149,6 @@ jobs:
             echo "No index changes to publish."
           else
             version=$(tr -d '[:space:]' < "$GITHUB_WORKSPACE/eikon/VERSION")
-            git commit -m "Publish com.getboolean.eikon $version"
+            git commit -m "Publish the Eikon Sileo index $version"
             git push origin HEAD:main
           fi

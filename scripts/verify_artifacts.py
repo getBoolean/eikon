@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the three install artifacts in dist/ and that they share one binary.
+"""Verify the two install artifacts in dist/ and that they share one binary.
 
     uv run scripts/verify_artifacts.py dist/
 
@@ -173,7 +173,7 @@ def is_macho(path: Path) -> bool:
 # --- Artifact discovery and extraction ------------------------------------
 
 def find_artifacts(dist: Path) -> dict[str, Path]:
-    patterns = {"ipa": "*.ipa", "tipa": "*.tipa", "deb": "*.deb"}
+    patterns = {"ipa": "*.ipa", "deb": "*.deb"}
     found: dict[str, Path] = {}
     problems = []
     for kind, pattern in patterns.items():
@@ -188,7 +188,7 @@ def find_artifacts(dist: Path) -> dict[str, Path]:
 
 
 def extract(artifact: Path, kind: str, dest: Path) -> Path:
-    if kind in ("ipa", "tipa"):
+    if kind == "ipa":
         with zipfile.ZipFile(artifact) as archive:
             names = archive.namelist()
             archive.extractall(dest)
@@ -219,7 +219,7 @@ def read_info(app: Path) -> dict:
 
 def check_layout(kind: str, dest: Path, app: Path) -> list[str]:
     problems: list[str] = []
-    if kind in ("ipa", "tipa"):
+    if kind == "ipa":
         for name in zip_entries(dest):
             top = name.split("/", 1)[0]
             if top not in ("Payload", "") and not name.startswith("Payload/"):
@@ -267,7 +267,7 @@ def check_version_and_stamp(kind: str, app: Path, version: str) -> list[str]:
 
 def check_hygiene(kind: str, dest: Path, app: Path) -> list[str]:
     problems = []
-    names = zip_entries(dest) if kind in ("ipa", "tipa") else [
+    names = zip_entries(dest) if kind == "ipa" else [
         str(p.relative_to(dest)) for p in dest.rglob("*") if p.name != ".zip-entries"
     ]
     for name in names:
@@ -289,8 +289,8 @@ def check_signature(kind: str, app: Path, expected: dict) -> list[str]:
     executable = app_executable(app)
     entitlements = entitlements_of(executable)
 
-    # The three artifacts differ only in entitlements, so each set must match its
-    # plist exactly: a missing key, a wrong value, or an extra key all fail.
+    # The artifacts differ only in entitlements, so each set must match its plist
+    # exactly: a missing key, a wrong value, or an extra key all fail.
     for key in sorted(set(expected) | set(entitlements)):
         if key not in entitlements:
             problems.append(f"{kind}: missing entitlement {key}={expected[key]!r}")

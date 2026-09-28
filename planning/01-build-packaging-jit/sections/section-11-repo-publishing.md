@@ -372,7 +372,7 @@ make publish ARGS="--dry-run"
 **1. Preflight.** Fail with a clear message on the first unmet condition.
 - **Clean tree:** `git status --porcelain` is empty.
 - **Tag:** `VER=$(cat VERSION)`, and `HEAD` is tagged `v$VER` (`git tag --points-at HEAD` contains it). Also run `scripts/version.sh --check`.
-- **Artifacts:** `dist/` holds the three artifacts for `$VER` and `SHA256SUMS`, and `uv run scripts/verify_artifacts.py dist/` passes.
+- **Artifacts:** `dist/` holds the two artifacts (the ipa and the deb) for `$VER` and `SHA256SUMS`, and `uv run scripts/verify_artifacts.py dist/` passes.
 - **Tools:** `gh auth status` succeeds, and `dpkg-deb` and `zstd` exist.
 - **No existing release:** `gh release view "v$VER" --repo getBoolean/eikon` **fails**, meaning the release doesn't exist. If it exists, refuse and exit non-zero. This script never replaces or re-uploads assets. A fix means a new version.
 

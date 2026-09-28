@@ -8,12 +8,12 @@ SHELL := /bin/bash
 stub = echo "$@: not implemented yet (section $(1))" >&2; exit 1
 
 .PHONY: help doctor bootstrap version generated project check \
-	test test-swift test-scripts archive ipa tipa deb package verify all \
+	test test-swift test-scripts archive ipa deb package verify all \
 	publish fetch-deps verify-deps pin-dep clean
 
 help:
 	@echo "Targets: doctor bootstrap version generated project check test test-swift"
-	@echo "         test-scripts archive ipa tipa deb package verify all publish"
+	@echo "         test-scripts archive ipa deb package verify all publish"
 	@echo "         fetch-deps verify-deps pin-dep NAME=<name> TAG=<tag> [ASSET=<asset>] clean"
 
 doctor:
@@ -52,14 +52,14 @@ test-scripts:
 archive:
 	@scripts/archive.sh
 
-ipa tipa deb: archive
+ipa deb: archive
 	@scripts/package.sh $@
 
 # Clear dist/ first so only this build is packaged, summed and verified.
 package: archive
 	@rm -rf dist
-	@$(MAKE) ipa tipa deb
-	@cd dist && shasum -a 256 Eikon-*.ipa Eikon-*.tipa *.deb > SHA256SUMS
+	@$(MAKE) ipa deb
+	@cd dist && shasum -a 256 Eikon-*.ipa *.deb > SHA256SUMS
 	@echo "package: wrote dist/SHA256SUMS"
 
 verify:

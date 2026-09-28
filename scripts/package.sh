@@ -1,10 +1,10 @@
 #!/bin/bash
 # Package the Release archive into one install artifact. Run from the repo root.
 #
-#   scripts/package.sh ipa | tipa | deb
+#   scripts/package.sh ipa | deb
 #
-# One build, three artifacts: they differ only in entitlements, the EKPackageKind
-# stamp and container format. Reads the version from VERSION; nothing is hard-coded.
+# One build, two artifacts: they differ only in entitlements, the EKPackageKind
+# stamp, the bundle id and container format. Reads the version from VERSION.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -17,9 +17,13 @@ die() {
 
 kind=${1:-}
 case "$kind" in
-ipa | tipa | deb) ;;
-*) die "usage: package.sh ipa|tipa|deb" ;;
+ipa | deb) ;;
+*) die "usage: package.sh ipa|deb" ;;
 esac
+
+# The deb gets its own bundle id, so a Dopamine install and a TrollStore-installed
+# ipa can coexist. The ipa keeps the id the archive built with.
+deb_bundle_id="com.getboolean.eikon.rootless"
 
 version=$(tr -d '[:space:]' <VERSION)
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "VERSION '$version' is not MAJOR.MINOR.PATCH"
@@ -46,6 +50,9 @@ app="$stage/Eikon.app"
 COPYFILE_DISABLE=1 ditto "$archived_app" "$app"
 
 /usr/libexec/PlistBuddy -c "Set :EKPackageKind $kind" "$app/Info.plist"
+if [ "$kind" = deb ]; then
+	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $deb_bundle_id" "$app/Info.plist"
+fi
 
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
 # One bundle-level call: Procursus ldid signs nested code first and seals resources.
@@ -57,7 +64,7 @@ read_back=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app
 mkdir -p dist
 
 case "$kind" in
-ipa | tipa)
+ipa)
 	mkdir -p "$stage/Payload"
 	mv "$app" "$stage/Payload/Eikon.app"
 	out="$root/dist/Eikon-$version.$kind"

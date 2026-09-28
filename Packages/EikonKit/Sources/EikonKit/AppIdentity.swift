@@ -2,7 +2,7 @@ import Foundation
 
 /// The package kind stamped at packaging time, and the bundle id as installed.
 public struct AppIdentity: Codable, Sendable, Equatable {
-    /// Info.plist `EKPackageKind`: development, deb, tipa or ipa.
+    /// Info.plist `EKPackageKind`: development, deb or ipa.
     public var packageKind: String
     /// Read at run time: AltStore free accounts may rewrite it.
     public var bundleIdentifier: String

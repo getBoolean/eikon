@@ -12,17 +12,19 @@ filing must follow the same rule: no program titles, nothing device-identifying.
 The artifacts used below come from the **GitHub Release**, not local builds, so the
 reports describe what users actually install. `<v>` is the released version.
 
+**One method at a time.** The Dopamine deb (`com.getboolean.eikon.rootless`) and the ipa (`com.getboolean.eikon`) have different bundle ids and can coexist. A TrollStore-installed ipa and an AltStore-installed ipa share the id `com.getboolean.eikon`, so installing one shadows the other — uninstall (and reboot or `uicache`) before switching between them.
+
 ## iPad Pro 12.9" 6th gen (M2), iPadOS 17.0
 
-### TrollStore
-1. With Developer Mode on, install `Eikon-<v>.tipa` and launch it.
-2. Expect TrollStore to open and return, then the status screen to show **usable**, source `trollStore`.
-3. File the report.
-4. Disable TrollStore's URL scheme, then relaunch after the cooldown. Expect **not usable**, reason `trollStoreTimedOut`. Re-enable the scheme, press **Retry JIT**, and expect usable again.
-5. Turn Developer Mode off and try to launch. Record in the report notes what happens: a TrollStore install warning, a launch refusal, or a launch without JIT.
+### TrollStore (the `.ipa`, not a separate tipa)
+1. With Developer Mode on, install `Eikon-<v>.ipa` **with TrollStore** and launch it.
+2. Record the **Detected method** and **Bundle ID** on the status screen. We expect `trollStore`; the report confirms what markers TrollStore leaves for an ipa install.
+3. Use TrollStore's **"Open with JIT"** (or the enable-JIT flow) and relaunch. Expect **usable**. File the report.
+4. Launch normally (without Open with JIT). If it's not usable, note the reason; press **Retry JIT** and see whether TrollStore's enable-JIT URL grants it.
+5. Turn Developer Mode off and try to launch. Record what happens: a TrollStore warning, a launch refusal, or a launch without JIT.
 
 ### Dopamine 3 (if it supports this device)
-1. Uninstall the `.tipa` first; both use the same bundle id.
+1. The deb has its own id, so it won't collide with a TrollStore ipa — but uninstall an AltStore ipa first if one is present.
 2. Add `https://getboolean.github.io/eikon-source/` in Sileo, install Eikon, and launch.
 3. Expect **usable** at first paint, source `dopamine`.
 4. File the report. Its notes should also answer:
@@ -38,7 +40,7 @@ If Dopamine 3 can't run on this device, write that down; the deb is then desktop
 ## iPhone 13 mini (A15), iOS 27.0
 
 ### AltStore
-1. Install `Eikon-<v>.ipa` with AltStore.
+1. Install `Eikon-<v>.ipa` with AltStore. **This is the key check for 0.2.0:** the ipa now embeds two private entitlements it didn't in 0.1.0 (`com.apple.private.security.no-sandbox`, `com.apple.private.memorystatus`). AltStore is expected to drop them when it re-signs, but if it validates and **rejects** them the install fails. If it does, drop those two keys from `packaging/entitlements/ipa.plist` and cut a new version.
 2. Record any capability errors for `increased-memory-limit` or `extended-virtual-addressing`, and whether the install succeeds.
 3. Launch. Expect **not usable**, reason `txmEnforced`, with or without an external JIT enabler — this device has Apple's Trusted Execution Monitor.
 4. File the report.
@@ -53,7 +55,7 @@ LiveContainer) has granted JIT — to report JIT `usable` with source
 JIT `not usable` (`txmEnforced`) regardless. This case is to find out the ground
 truth, not to confirm a fixed expectation.
 
-1. Install LiveContainer (via AltStore, SideStore, or TrollStore) and load `Eikon-0.1.0.ipa` into it as a guest app.
+1. Install LiveContainer (via AltStore, SideStore, or TrollStore) and load `Eikon-<v>.ipa` into it as a guest app.
 2. If you use a JIT source with LiveContainer (SideStore/JITStreamer, or its TrollStore JIT), enable it for the guest, then launch Eikon inside LiveContainer.
 3. File the report, and record in the notes:
    - the **Detected method** and the **Bundle ID** shown on the status screen (LiveContainer may run the guest under its own id)
@@ -77,8 +79,7 @@ truth, not to confirm a fixed expectation.
 
 | Device | Install | Expected JIT | Source or reason |
 |---|---|---|---|
-| iPad M2, 17.0 | TrollStore | usable | `trollStore` |
-| iPad M2, 17.0 | TrollStore, scheme disabled | not usable | `trollStoreTimedOut` |
+| iPad M2, 17.0 | TrollStore ipa, Open with JIT | usable | `trollStore` |
 | iPad M2, 17.0 | Dopamine 3 | usable | `dopamine` |
 | iPad M2, 17.0 | Dopamine 3, JIT off | not usable | `dopamineJITOff` |
 | iPhone A15, 27.0 | AltStore | not usable | `txmEnforced` |

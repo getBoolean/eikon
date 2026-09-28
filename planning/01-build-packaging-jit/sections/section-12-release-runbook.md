@@ -42,7 +42,7 @@ Checks to perform while doing this section. These are not kept as tests.
 1. Before tagging, run `make all` locally on a clean tree at the commit to be tagged, and confirm it passes.
 2. Run `scripts/version.sh --check-tag v0.1.0` locally. It passes with `VERSION` = `0.1.0`, and a mismatched tag such as `v0.1.1` fails.
 3. Run `scripts/repo/publish.sh --dry-run` and read what it would do. It must print each outward-facing action and perform none.
-4. After the release run, confirm three things. The release has the three artifacts plus `SHA256SUMS`. The `eikon-source` `docs/Packages` hash matches the deb downloaded from the asset URL. The Sileo URL serves `Release` and `Packages`.
+4. After the release run, confirm three things. The release has the two artifacts (the ipa and the deb) plus `SHA256SUMS`. The `eikon-source` `docs/Packages` hash matches the deb downloaded from the asset URL. The Sileo URL serves `Release` and `Packages`.
 
 ---
 
@@ -189,7 +189,7 @@ Do these in order. **Each step marked [APPROVAL] is outward-facing.** Prepare th
 
 ### C5. Tag and release
 1. **[APPROVAL]** Create the annotated tag `v0.1.0` on the verified commit, then push the tag. This starts `release.yml`.
-2. Watch the run. `build` must pass the tag guard and `make all`. `release` creates the GitHub Release with the three artifacts and `SHA256SUMS`.
+2. Watch the run. `build` must pass the tag guard and `make all`. `release` creates the GitHub Release with the two artifacts and `SHA256SUMS`.
 3. **[APPROVAL]** The `publish` job pauses for environment approval. The owner approves it in GitHub. This migrates `eikon-source`: `docs/` is regenerated with only `0.1.0`, and `README.md` is rewritten.
 4. If `publish` fails or is skipped (no secret), don't re-tag and don't touch the release. Fix the cause and re-run only the `publish` job, or fall back to `scripts/repo/publish.sh` (itself **[APPROVAL]**). The script refuses when the release already exists, so for this recovery use only its index-and-push part, as section 11 defines.
 5. If the release itself is wrong, **never replace assets**. Bump `VERSION` (for example `0.1.1`), commit, and release again. Each of those steps is also **[APPROVAL]**.

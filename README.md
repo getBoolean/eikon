@@ -74,11 +74,13 @@ process handle SIGBUS SIGSEGV SIGILL SIGTRAP -s false -n false
 
 ## Install methods and artifacts
 
-- **Dopamine rootless deb** (`com.getboolean.eikon`, `iphoneos-arm64`), installed at `/var/jb/Applications/Eikon.app`. Supported on Dopamine 2, for iOS 15.0–16.6.1.
-- **`Eikon.tipa`** for TrollStore, up to iOS 17.0. On iOS 16 and later, **Developer Mode must be on**: the `.tipa` carries `get-task-allow`, which TrollStore's enable-JIT feature needs.
-- **`Eikon.ipa`** for AltStore, on current iOS. AltStore re-signs it with the developer profile's entitlements, replacing the ones in the ipa.
+- **Dopamine rootless deb** (`com.getboolean.eikon.rootless`, `iphoneos-arm64`), installed at `/var/jb/Applications/Eikon.app`. Supported on Dopamine 2, for iOS 15.0–16.6.1. Needs no Developer Mode.
+- **`Eikon.ipa`** (`com.getboolean.eikon`) for **AltStore or TrollStore**:
+  - With **AltStore**: it re-signs the ipa with the developer profile's entitlements, replacing the ones in the ipa, and may rewrite the bundle id.
+  - With **TrollStore**: it installs the ipa as-is, keeping its entitlements. "Open with JIT" or the enable-JIT feature grants JIT.
+  - On iOS 16 and later, **Developer Mode must be on**: the ipa carries `get-task-allow`.
 
-The deb needs no Developer Mode. Each artifact carries the same binary, signed with its own entitlements (`packaging/entitlements/`); `make verify` checks that.
+The deb and the ipa use **different bundle ids** so a Dopamine install and a TrollStore-installed ipa can coexist. Both carry the same binary, signed with their own entitlements (`packaging/entitlements/`); `make verify` checks that.
 
 ## JIT
 

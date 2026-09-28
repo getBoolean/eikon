@@ -17,7 +17,7 @@ The owner, playing their own collection of Windows games on their own jailbroken
 5. Show game text correctly in any language the game was written for.
 6. Translate game text while the game runs, into the user's language.
 7. Install as a Dopamine rootless package from the Sileo source.
-8. Install on devices that are not jailbroken: a TrollStore build (`.tipa`), and an IPA sideloaded by hand with AltStore.
+8. Install on devices that are not jailbroken: a single `.ipa` that installs with AltStore, and the same `.ipa` installed with TrollStore. (The separate `.tipa` was dropped on 2026-09-28; TrollStore installs the `.ipa` directly.)
 9. Sync game saves and settings across the owner's devices through their own WebDAV server.
 
 ## Games to support, in priority order
@@ -37,7 +37,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 ## Functional requirements
 
 ### Builds and JIT
-- **One build.** One app binary, built once, ships as all three artifacts: the Dopamine deb, the TrollStore `.tipa`, and the AltStore `.ipa`. The artifacts differ only in entitlements and packaging. The app decides at run time, from whether the process has usable JIT, which routes it offers.
+- **One build.** One app binary, built once, ships as two artifacts: the Dopamine deb and the `.ipa` (for AltStore and TrollStore). They differ only in entitlements, one Info.plist stamp, the bundle id and packaging. The app decides at run time, from whether the process has usable JIT, which routes it offers. (Two artifacts, not three, since 2026-09-28.)
 - **Turning JIT on.** The app turns JIT on automatically where the install method allows it:
   - on Dopamine, using what Dopamine provides, with no setup or extra tool for the user
   - on TrollStore, through TrollStore's "launch with JIT" URL scheme (`apple-magnifier://enable-jit?bundle-id=<id>`, TrollStore 2.0.12 and later), the way UTM and PojavLauncher do. It does not use the `dynamic-codesigning` entitlement: iOS 15 and later on A12 and newer chips ban it, and apps signed with it crash on launch.
@@ -100,9 +100,9 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 - Works on every build and install method.
 
 ### Packaging
-- A Dopamine rootless deb, package id `com.getboolean.eikon`, published on the `eikon-source` Sileo repo through GitHub Pages. Only package files go there, never app source.
-- A TrollStore package (`Eikon.tipa`) and an AltStore package (`Eikon.ipa`). All three packages carry the same app binary at the same version, and differ only in entitlements and packaging.
-- The deb and the `.tipa` run unsandboxed (`com.apple.private.security.no-sandbox`), which TrollStore documents and Dopamine honors. The `.tipa` keeps its data container, which TrollStore says `no-sandbox` allows. Neither uses root helpers (`com.apple.private.persona-mgmt`) or any entitlement TrollStore lists as banned. Neither uses `platform-application` (decided 2026-09-27). It moves the app to a stricter IOKit sandbox profile, so Metal would need GPU exceptions. It can also cost the data container unless `com.apple.private.security.storage.AppDataContainers` is added. No planned feature needs it.
+- A Dopamine rootless deb, package id `com.getboolean.eikon.rootless`, published on the `eikon-source` Sileo repo through GitHub Pages. Only package files go there, never app source. (Its own id, distinct from the ipa, so a Dopamine install and a TrollStore-installed ipa can coexist.)
+- One `Eikon.ipa`, installed with either AltStore or TrollStore, with bundle id `com.getboolean.eikon`. AltStore rewrites the id per account and re-signs, replacing the ipa's entitlements; TrollStore installs it as-is and keeps them. Both packages carry the same app binary at the same version, and differ only in entitlements, the bundle id and packaging.
+- The deb and the `.ipa` run unsandboxed (`com.apple.private.security.no-sandbox`) where their install method allows it: Dopamine honors it for the deb, and TrollStore for the ipa. AltStore re-signs the ipa and drops it. The TrollStore ipa keeps its data container, which TrollStore says `no-sandbox` allows. Neither uses root helpers (`com.apple.private.persona-mgmt`) or any entitlement TrollStore lists as banned. Neither uses `platform-application` (decided 2026-09-27). It moves the app to a stricter IOKit sandbox profile, so Metal would need GPU exceptions. It can also cost the data container unless `com.apple.private.security.storage.AppDataContainers` is added. No planned feature needs it.
 
 ## Constraints
 
@@ -115,7 +115,9 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
   - A crash in a game takes the app down with it.
 - **What each install method allows:**
 
-  | | Dopamine deb | TrollStore `.tipa` | AltStore `.ipa` |
+  (TrollStore and AltStore install the same `.ipa`; they differ only in runtime JIT behaviour.)
+
+  | | Dopamine deb | TrollStore `.ipa` | AltStore `.ipa` |
   |---|---|---|---|
   | JIT | Automatic, through Dopamine | Automatic, through TrollStore's JIT launch | Never requested. Used if a JIT enabler provides it |
   | x86 translation, usual case | FEX JIT | FEX JIT | Box64 interpreter (FEX if an enabler gave usable JIT) |
@@ -181,7 +183,7 @@ For Eikon, that means: build the graphics layers as ARM64EC for 64-bit games; st
 
 ## Operational requirements
 
-- Sign every binary and dylib in each package so it loads under its install method: ad-hoc with `ldid` for Dopamine, TrollStore's signing for the `.tipa`, and AltStore's signing at install for the `.ipa`.
+- Sign every binary and dylib in each package so it loads under its install method: ad-hoc with `ldid` for Dopamine, and for the `.ipa` either TrollStore's signing or AltStore's signing at install.
 - Run Wine's server as a thread inside the app process, and replace its use of Mach task ports, which iOS restricts.
 - Survive iOS memory limits for the app process. Unity games need gigabytes.
 - Handle the app going to the background while a game runs: pause the game, and stop Metal drawing, since using Metal in the background crashes the process.
@@ -192,9 +194,9 @@ For Eikon, that means: build the graphics layers as ARM64EC for 64-bit games; st
 Made by the owner on 2026-09-27:
 
 - **License:** GPL-3.0-or-later. Kirikiroid2's GPL-derived video player may ship.
-- **Builds:** one build, shipped as the Dopamine deb, the TrollStore `.tipa`, and the AltStore `.ipa`. The app picks routes at run time from whether it has usable JIT. This replaced the earlier two-build plan (main and no-JIT) on 2026-09-27, so that installs without JIT still run the no-JIT routes, and AltStore installs with JIT from an enabler can use FEX.
+- **Builds:** one build, shipped as the Dopamine deb and the `.ipa` (AltStore or TrollStore). The app picks routes at run time from whether it has usable JIT. This replaced the earlier two-build plan (main and no-JIT) on 2026-09-27, so that installs without JIT still run the no-JIT routes, and AltStore installs with JIT from an enabler can use FEX.
 - **JIT:** automatic on Dopamine and TrollStore. Relying on Dopamine's and TrollStore's mechanisms is acceptable.
-- **Entitlements:** unsandboxed for the deb and the `.tipa`, with `get-task-allow` on the `.tipa` for TrollStore's JIT launch. Sideloaded apps already need Developer Mode. No root helpers, and no `platform-application`.
+- **Entitlements:** unsandboxed for the deb and the `.ipa`, with `get-task-allow` on the `.ipa` for TrollStore's JIT launch (AltStore drops it and re-signs). Sideloaded apps already need Developer Mode. No root helpers, and no `platform-application`.
 - **Process model:** games run inside the app process on every install method.
 - **32-bit address space:** a guest window, not a small `__PAGEZERO`, which the iOS kernel rejects.
 - **Madeira:** take its design decisions, but do not build on its code or forks. It is a research prototype, far from complete.

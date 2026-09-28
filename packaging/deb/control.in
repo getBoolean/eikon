@@ -1,4 +1,4 @@
-Package: com.getboolean.eikon
+Package: com.getboolean.eikon.rootless
 Name: Eikon
 Version: @VERSION@
 Architecture: iphoneos-arm64
