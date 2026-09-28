@@ -16,6 +16,7 @@ TrollStore-installed ipa can coexist; the ipa keeps `com.getboolean.eikon`.
 
 | Key | ipa | deb | Purpose and who honours it |
 |---|---|---|---|
+| `com.apple.private.security.container-required` | – | ✓ | Gives the deb the normal app-container sandbox, keyed to its bundle id. Without it, a sandboxed app under `/var/jb/Applications` got a sandbox that denied writes to its own data container and the GPU user client (`AGXDeviceUserClient`). TrollStore adds this key itself when it installs a sandboxed ipa, so the ipa doesn't carry it. |
 | `get-task-allow` | ✓ | – | Lets another process attach. TrollStore's enable-jit / "Open with JIT" attaches to set `CS_DEBUGGED`. AltStore's developer profile carries it too. The deb leaves it out (Dopamine doesn't need it, and on iOS 16+ it would force Developer Mode). |
 | `com.apple.developer.kernel.increased-memory-limit` | ✓ | ✓ | Raises the per-app memory cap. A public App ID capability, so AltStore requests it from the developer account. |
 | `com.apple.developer.kernel.extended-virtual-addressing` | ✓ | ✓ | Allows a larger virtual address space. Also a public App ID capability. |

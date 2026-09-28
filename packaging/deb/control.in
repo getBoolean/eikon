@@ -3,6 +3,8 @@ Name: Eikon
 Version: @VERSION@
 Architecture: iphoneos-arm64
 Depends: firmware (>= 15.0)
+Conflicts: com.getboolean.eikon
+Replaces: com.getboolean.eikon
 Section: Games
 Maintainer: getBoolean <https://github.com/getBoolean>
 Author: getBoolean
