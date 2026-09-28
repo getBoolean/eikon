@@ -1,0 +1,48 @@
+name: file-report
+
+# Manually triggered: paste a device report's JSON and it gets validated,
+# filed under device-reports/ and committed. workflow_dispatch requires write
+# access, so only maintainers can run it. The filer rejects malformed input.
+on:
+  workflow_dispatch:
+    inputs:
+      report:
+        description: 'Device report JSON (from the app''s Copy report / Share report)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: file-report
+  cancel-in-progress: false
+
+jobs:
+  file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: File the report
+        env:
+          REPORT_JSON: ${{ inputs.report }}
+        run: |
+          # Pass the JSON through a file (printf '%s' keeps % literal); the
+          # filer validates it against the schema and exits non-zero on junk.
+          printf '%s' "$REPORT_JSON" > incoming.json
+          path=$(uv run scripts/file_device_report.py --out-dir device-reports incoming.json)
+          rm -f incoming.json
+          echo "Filed: $path"
+      - name: Commit if new
+        run: |
+          if [ -n "$(git status --porcelain device-reports)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add device-reports
+            git commit -m "File a device report"
+            git push
+            echo "Committed the new report."
+          else
+            echo "No change: this report is already filed."
+          fi

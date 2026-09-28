@@ -63,6 +63,12 @@ truth, not to confirm a fixed expectation.
 
 ## Filing
 
+**Automated (recommended).** Trigger the `file-report` workflow with the report's JSON. It validates, files and commits the report for you. Because `workflow_dispatch` needs write access, only maintainers can run it.
+- GitHub UI: **Actions → file-report → Run workflow**, paste the JSON.
+- CLI: `gh workflow run file-report.yml -f report="$(cat report.json)"`.
+- On device: a Shortcut that receives the shared report and calls that workflow via the GitHub API (with your own fine-grained token) makes it one tap.
+
+**Manual.**
 1. Export the report from the app (**Share report**, or **Copy report** and paste into a file).
 2. Run `uv run scripts/file_device_report.py <path>` (or `-` for stdin). It validates the report, rejects unknown schema versions, and writes `device-reports/<date>-<model>-<method>-<hash>.json`. Refiling an identical report is a no-op.
 3. Commit the filed reports. Pushing them is outward-facing, so ask the owner first.
