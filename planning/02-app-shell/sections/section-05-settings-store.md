@@ -12,6 +12,9 @@ What this section delivers, all in `Packages/EikonCore/Sources/EikonCore/Setting
 - `LWWMap.swift`: `LWWEntry` and `LWWMap`, with merge, tombstones, preservation of unknown keys, and `deletedAt` shadowing for effective reads.
 - `SettingKey.swift`: typed keys, key builders, the keys split 02 uses, and documentation of the reserved namespaces.
 - `SettingsStore.swift`: file-backed, lock-guarded and `@unchecked Sendable`. It keeps one file per replica, forks to a new replica when its own file is from a future format, and persists off the main thread with a debounce.
+- `ReplicaFile.swift` (added): the tolerant `settings/<replica>.json` document.
+
+> **Changed in code review.** Fingerprints are keyed by value (`fp/<scheme>/<digest>`) rather than numbered slots, so two devices adding different fingerprints never overwrite each other. Section 03 had landed by then, so `fingerprintCap` is `Fingerprint.maxPerGame`.
 
 Tests go in `Packages/EikonCore/Tests/EikonCoreTests/SettingsTests.swift`.
 
@@ -24,7 +27,7 @@ Tests go in `Packages/EikonCore/Tests/EikonCoreTests/SettingsTests.swift`.
   - the empty `EikonCoreTests` target
   - the shared persisted-file rules type `Persisted` in `EikonCore/Library/Persisted.swift`: a `format` header, atomic writes, and the rule that a newer-format file is read-only. Use `Persisted` for every file this section writes. Do not re-implement atomic writing.
 - This section can run in parallel with section 02 (detection).
-- `GameID` (a struct wrapping a random `UUID`) and `Fingerprint` are defined by section 03, which lands **after** this one. So this section's game-scoped APIs take the game's `UUID` (callers pass `gameID.uuid`), and the fingerprint APIs are generic over any `Codable & Sendable` value. Section 03 or 09 may add thin convenience overloads taking `GameID`/`Fingerprint`, but none are needed here.
+- `GameID` (a struct wrapping a random `UUID`) and `Fingerprint` are defined by section 03. (It was planned to land after this one, but it landed first.) So this section's game-scoped APIs take the game's `UUID` (callers pass `gameID.uuid`), and the fingerprint APIs are generic over any `Codable & Sendable` value. Section 03 or 09 may add thin convenience overloads taking `GameID`/`Fingerprint`, but none are needed here.
 - The `RouteID` enum comes later (section 06). The `route.override` key therefore stores the route's **string raw value**, following the rule that enum values are stored as their raw strings. Consumers convert it, and an unknown raw value means "no override".
 
 ### Blocks
@@ -89,7 +92,7 @@ File: `Packages/EikonCore/Tests/EikonCoreTests/SettingsTests.swift`.
    - Other games are unaffected.
 9. **Decode failure reads as unset.** A stored value that fails to decode as the key's `Value` type (for example a string stored where the key expects an integer) reads as `nil`. It does not throw or crash.
 10. **Persistence round trip.** Writes are persisted after `flush()`, and a new store instance over the same directory reads them back, with the same replica id.
-11. **Fingerprint cap.** Adding more fingerprints to a game than the cap keeps only the most recent ones, and `fingerprints(game:)` returns them. Assert "the most recently added ones survive and the oldest are gone". Do not assert the cap number itself: derive it from the store's public constant.
+11. **Fingerprint cap.** (Implemented with values keyed by digest; see below.) Adding more fingerprints to a game than the cap keeps only the most recent ones, and `fingerprints(game:)` returns them. Assert "the most recently added ones survive and the oldest are gone". Do not assert the cap number itself: derive it from the store's public constant.
 
 The plan's summary for this area lists the same behaviors: merge laws via a seeded loop, a newer reset beats an older set, unknown keys round-trip, the clock never goes backwards, future-format files are never rewritten and the own future-format file forks, and `deletedAt` hides older keys but not newer ones.
 
@@ -121,14 +124,15 @@ public struct HybridTimestamp: Hashable, Comparable, Codable, Sendable {
     - wall = max(now in millis, last.wallMillis)
     - if wall equals `last.wallMillis`, then counter = last.counter + 1; otherwise counter = 0
   - `mutating func observe(_ remote: HybridTimestamp)` advances the clock so the next `tick` orders after `remote`, even when `remote` is far in the future.
+  - Remote times past `HybridClock.maxWallMillis` (end of year 9999) are ignored, and non-finite or huge wall clocks are clamped, so a corrupt file can't overflow the clock.
 - The replica file persists the clock's last timestamp, so after a restart it continues past everything it issued.
 
 ### `JSONValue.swift`
 
-- `public enum JSONValue: Codable, Sendable, Equatable` with cases `null`, `bool(Bool)`, `number(Double)`, `string(String)`, `array([JSONValue])` and `object([String: JSONValue])`.
+- `public enum JSONValue: Codable, Sendable, Equatable` with cases `null`, `bool(Bool)`, `int(Int64)`, `uint(UInt64)`, `number(Double)`, `string(String)`, `array([JSONValue])` and `object([String: JSONValue])`. Integers decode into the exact cases first, so unknown keys holding large integers round-trip unchanged.
 - It uses a custom single-value `Codable`, so any JSON round-trips.
 - Typed accessors convert between `Value: Codable` and `JSONValue` through `JSONEncoder`/`JSONDecoder`: encode the value, then decode the result as `JSONValue`, and the reverse for reads.
-  - Integers are exact up to 2^53, which covers every value 02 stores.
+  - Integers are exact across the Int64 / UInt64 range.
 
 ### `LWWMap.swift`
 
@@ -172,7 +176,8 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
 - **Storage key layout:**
   - Per-game keys are `game/<gameUUID>/<name>`, using the UUID's canonical lowercase string.
   - Global keys are stored under `<name>`.
-  - Provide one internal builder, for example `storageKey(game: UUID?)`, that all code uses.
+  - One internal builder, `storageKey(game: UUID?) -> String?`, that all code uses. A scope mismatch (a game key without a game, or a global key with one) gives nil, which reads as unset and writes nothing, instead of trapping.
+  - The layout is parsed in one place, `SettingPath` in `LWWMap.swift`.
   - Enum-typed values are stored as their `String` raw values.
 - **Keys defined in 02:**
   - per-game `displayName: SettingKey<String>`
@@ -181,10 +186,9 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
   - per-game `routeOverride: SettingKey<String>`, named `route.override`. The value is a route's raw value; absent means Automatic.
   - per-game `deletedAt: SettingKey<Int64>`
     - The value is wall-clock millis, for display only. Shadowing uses the entry's HLC timestamp.
-  - per-game fingerprint slots `fp/<scheme>/<n>`:
-    - `n` is in `0..<fingerprintCap`, with `fingerprintCap = 8`, exposed as a public static constant.
-    - Each slot is a separate key, so two devices adding fingerprints don't overwrite a whole list.
-    - Provide a builder that takes `scheme` and `n`.
+  - per-game fingerprints `fp/<scheme>/<digest>` (`SettingKey.fingerprint(scheme:digest:)`):
+    - `digest` is 16 hex characters of SHA-256 over the value's sorted-keys JSON, so equal fingerprints share a key and different ones never collide across devices.
+    - `SettingsStore.fingerprintCap` (= `Fingerprint.maxPerGame`) live fingerprints are kept per game and scheme.
   - global `merged/<gameUUID>`: a builder taking the merged-away game's UUID. Its value is the target game's UUID string. The identity sections resolve these links.
 - **Reserved namespaces:** document these in a doc comment in `SettingKey.swift`, each with the split that owns it:
   - `fex.*`: split 05
@@ -208,7 +212,7 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
      - The file shape is `{ format: 1, replica, clock, entries, forkedFrom? }`.
      - Read and write it through section 01's `Persisted` rules: a format header and atomic temp-then-rename writes with fsync.
   3. **Fork on own future format.** If the own file's `format` is newer than the app knows:
-     - Mint a new `ReplicaID` and replace `replica-id` with it.
+     - Mint a new `ReplicaID`. Write the new replica file (with `forkedFrom`) synchronously, and only then replace `replica-id`, so a crash can't lose the fork marker.
      - Leave the old file byte-identical and merge its readable entries read-only.
      - Record `forkedFrom = <old replica>` in the new replica's file, so the condition survives restarts.
      - Expose it, for example as `public var forkedFrom: ReplicaID? { get }`.
@@ -219,7 +223,8 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
      - Entries that fail to decode are skipped. They remain in the peer's file untouched.
      - Provide a public `reloadReplicaFiles()` (or similar) that repeats this merge, so split 12 can call it after a sync.
   5. Call `clock.observe` on every merged timestamp.
-- **The own file** holds the full merged map this replica knows. Merge is idempotent, so re-merging it elsewhere is harmless. It never writes any other replica's file.
+- **The own file** holds the full merged map this replica knows. `reloadReplicaFiles()` marks it dirty when a merge changed anything. Own-file entries this build can't decode are kept raw and written back unchanged. Adding a top-level or per-entry field requires a `format` bump, because an older build rewrites only the fields it knows.
+- **`replica-id` is excluded from backup.** A device restored from another's backup mints its own id and reads the restored settings file as a peer. Merge is idempotent, so re-merging it elsewhere is harmless. It never writes any other replica's file.
 
 **Reads**
 - `func value<V>(_ key: SettingKey<V>, game: UUID) -> V?` for game scope, and a global overload without `game`.
@@ -237,7 +242,7 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
   - A private serial `DispatchQueue` coalesces writes: each write (re)arms a work item roughly 0.5 s out.
   - The work item snapshots the map and clock under the lock, then encodes and writes outside the lock on the queue.
   - Nothing is written on the main thread.
-- `func flush()` synchronously writes any pending state and cancels the pending work item.
+- `func flush()` synchronously writes any pending state and cancels the pending work item. `deinit` also persists pending changes, and a failed write re-arms the debounce.
   - Callers invoke it on scene background and before a game session starts. Those call sites are wired in later sections.
   - Tests use it instead of sleeping.
 - **Own-file safety:** when the store forked, it writes only the new replica file. A read-only condition never causes a write to a future-format file.
@@ -248,22 +253,23 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
   - The write shadows every older key for that game on every replica once merged.
   - Running cleanup hooks is the library section's job, not the store's.
 - `fingerprints<F: Codable & Sendable>(game: UUID, scheme: Int, as: F.Type) -> [F]`:
-  - It returns the effective values of the `fp/<scheme>/<n>` slots, ordered most recent first by entry timestamp.
-  - Slots that fail to decode are skipped.
+  - It returns the live fingerprints, **most recent first** by entry timestamp, at most `fingerprintCap`. (`IdentityMatcher`'s `KnownGame.fingerprints` is oldest first, so section 09 reverses.)
+  - Values that fail to decode are skipped.
 - `addFingerprint<F: Codable & Sendable & Equatable>(_ fp: F, scheme: Int, game: UUID)`:
-  - If an equal value is already in a slot, rewrite that slot, which refreshes its recency.
-  - Otherwise write the first empty or tombstoned slot.
-  - If all `fingerprintCap` slots are full, overwrite the slot with the oldest timestamp.
-  - The effect is that the most recent `fingerprintCap` fingerprints are kept.
-- `removeFingerprint<F: Codable & Sendable & Equatable>(_ fp: F, scheme: Int, game: UUID)` tombstones the slot holding an equal value. Split uses it.
+  - It writes the value's digest key, which refreshes an equal fingerprint's recency.
+  - It then tombstones all but the newest `fingerprintCap`. Concurrent adds on two devices can briefly leave more live after a merge; reads cap them, and the next add trims.
+- `removeFingerprint<F: Codable & Sendable & Equatable>(_ fp: F, scheme: Int, game: UUID)` tombstones that fingerprint's key. Split uses it.
 - `copySettings(from: UUID, to: UUID, onlyWhereUnset: Bool)`:
   - It copies the source game's effective keys into the target with fresh ticks.
   - It excludes `deletedAt` and `fp/*`, because fingerprints are moved explicitly.
   - Merge uses `onlyWhereUnset: true` ("copy A's settings into B where B has none"). Split uses `false` into a brand-new id, so the new game starts as a fork of the old one's settings.
   - Afterwards the two games are independent.
 
-**Replica id**
+**Replica id and diagnostics**
 - Expose `public var replicaID: ReplicaID { get }` for the developer section.
+- `public func snapshot() -> LWWMap` returns the merged map, for diagnostics, tests and split 12.
+
+**Tests:** `SettingsTests.swift` has the 11 behaviors as 11 tests. The persistence test also round-trips `Int.max`.
 
 ## Checklist
 
