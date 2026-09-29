@@ -59,8 +59,7 @@ The "Constraints" section currently says, in the **No program titles** bullet: "
 
 - **The "No program titles" bullet in Constraints.** Replace the keying sentence. Game data is keyed by a **random game id** (a UUID minted once per game). A game is recognized by a **fingerprint**, not by a hash of the main executable. The fingerprint is built from:
   - an engine-declared id
-  - the file listing
-  - a partial hash of the key file (at most 2 MiB)
+  - a full content hash of the game's files, excluding saves and OS metadata
 
   Fingerprints are stored and synced **only as HMACs** under a library secret. Keep the rest of the bullet ("in the repo, logs, tests, or depictions", "Test content is original").
 - **The "Decisions" section.** Add a dated entry: "Made by the owner on <date of landing>", or append to the existing list with a date. It should state:
@@ -68,12 +67,12 @@ The "Constraints" section currently says, in the **No program titles** bullet: "
     - Game data is keyed by a random game id.
     - A location is matched to its game by, in order:
       1. the same drive and folder, so an in-place patch keeps the id
-      2. an exact content fingerprint
+      2. an exact content fingerprint: files alone identify a game only when 100% identical, saves excluded
       3. the engine's declared id
-      4. file-name similarity
+    - File-name similarity never matches or suggests.
     - Prompts appear only on real ambiguity and never block.
     - A mistake gives a duplicate entry, never shared saves.
-    - Full-file SHA-256 remains only for diagnostics: scanner `--hash` and "Verify files".
+    - Full-file SHA-256 also serves diagnostics: scanner `--hash` and "Verify files".
   - **Game drives.**
     - Games sit flat in game drives: the app's own `Documents/`, shown in Files as "On My iPad/Eikon" or "On My iPhone/Eikon", plus user-added folders on USB or other local storage.
     - Each game is an immediate subfolder of a drive, or sits inside one wrapper folder there.

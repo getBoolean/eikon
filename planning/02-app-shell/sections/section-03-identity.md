@@ -20,14 +20,16 @@ This follows the common launcher pattern (Playnite, Heroic, Bottles): an opaque 
 
 This section builds the pure, platform-neutral identity logic in the `EikonCore` SwiftPM package (`Packages/EikonCore`, iOS 15 + macOS 13, Swift 6 language mode, no UIKit). It covers:
 
-- the types `GameID`, `Fingerprint`, `Keyed`, `Keyed8`, plus the library secret
+- the types `GameID`, `Fingerprint`, `Keyed`, plus the library secret
 - `NameNormalizer`
 - `KeyFile`, which picks the key file per engine
 - `EngineDeclaredID`, with its generic-value blocklist
 - `FingerprintBuilder`, which turns signals into HMAC-keyed values
-- `IdentityMatcher`, which applies the five matching rules, including in-place patches keeping the game id
+- `IdentityMatcher`, which applies the matching rules, including in-place patches keeping the game id
 - merge and split, with `merged/` link resolution
-- `FileHasher`, a full SHA-256 used only for diagnostics
+- `FileHasher`, a streaming full SHA-256 used by the exact signal and by diagnostics
+
+> **Changed in code review (owner decisions).** Files alone identify a game only when the folders are **100% identical, excluding saves**. So the exact signal is a full content hash of the whole tree, not a listing plus key-file sample. There is no file-name similarity rule at all: no attach and no suggestion. The name set (`names`, `Keyed8`, Jaccard, `nameSimilarityThreshold`) was removed.
 
 Things outside this section:
 
@@ -59,7 +61,7 @@ Things outside this section:
   - `Sendable` protocol seams where I/O is involved.
   - Enums decode unknown raw values to a fallback rather than failing.
 - **Tests are few and behavioral.** They must not assert constants, exact strings, file contents or internal structure.
-  - Where a test depends on a threshold or cap, reference the public constant (for example `IdentityMatcher.nameSimilarityThreshold`, `Fingerprint.maxPerGame`) rather than typing the number into the test.
+  - Where a test depends on a threshold or cap, reference the public constant (for example `Fingerprint.maxPerGame`, `FileHasher.chunkSize`) rather than typing the number into the test.
 - **Read-only** access to game folders. Never write, never follow symlinks out of the folder. Reads go through section 02's `FolderReader`.
 
 ## Files
@@ -68,13 +70,14 @@ Create under `/Volumes/WD_SN770_1T/dev/GitHub/eikon/Packages/EikonCore/Sources/E
 
 | File | Contents |
 |---|---|
-| `GameIdentity.swift` | `GameID`, `Fingerprint`, `Keyed`, `Keyed8`, `LibrarySecret` |
+| `GameIdentity.swift` | `GameID`, `Fingerprint`, `Keyed`, `LibrarySecret`, `IdentityError` |
 | `NameNormalizer.swift` | NFC + trim + case-fold of names (listings, folder names) |
 | `KeyFile.swift` | key file selection per engine |
 | `EngineDeclaredID.swift` | engine-declared id readers + generic blocklist table |
 | `FingerprintBuilder.swift` | signals → keyed `Fingerprint` |
-| `IdentityMatcher.swift` | matching rules (pure), fingerprint cap, merge-link resolution, merge and split over an in-memory ledger |
-| `FileHasher.swift` | streaming full-file SHA-256 for diagnostics |
+| `IdentityMatcher.swift` | `KnownGame`, `LocationKey`, `MatchRule`, `MatchResult`; matching rules (pure), fingerprint cap, merge-link resolution |
+| `IdentityLedger.swift` | merge and split over an in-memory ledger (split out of `IdentityMatcher.swift` to keep files single-concept) |
+| `FileHasher.swift` | streaming full-file SHA-256 (exact signal and diagnostics) |
 
 Create or extend tests:
 
@@ -89,8 +92,10 @@ Create or extend tests:
 
 Modify, where section 02 left a placeholder:
 
-- `Packages/EikonCore/Sources/EikonCore/Detection/GameDetector.swift` fills `DetectionResult.keyFile` using `KeyFile` (see below).
-- `FolderListing` should use `NameNormalizer` as the single normalization implementation. If section 02 wrote a private normalizer, move it into `NameNormalizer` and call that.
+- `Packages/EikonCore/Sources/EikonCore/Detection/GameDetector.swift` fills `DetectionResult.keyFile` using `KeyFile`, and `GameDetector.version` is bumped to 2 so cached results without a key file are recomputed.
+- `FolderListing.normalize` was removed; `FolderListing` and `DetectionTests` call `NameNormalizer.normalize`, which now also trims whitespace.
+- `GameMakerDetector.swift` shares its chunk walk (`dataFile`, `chunk`) and adds `declaredNames` (GEN8 Name at +40, DisplayName at +100, STRG pointers to the bytes after a 32-bit length).
+- `FolderReader.swift` gains the `gen8Strings` read purpose (4 KiB).
 
 ## Tests first
 
@@ -99,7 +104,9 @@ All tests use Swift Testing (`import Testing`, free `@Test func` with behavior n
 ### Signals and fingerprints (§5.2)
 
 - Test: renaming the game folder (not its contents) leaves the fingerprint unchanged.
-- Test: changing one file's size, or the key file's first or last MiB, changes the exact signal but leaves the engine id unchanged.
+- Test: changing an existing file's size, or one byte deep in the tree at the same size, changes the exact signal but leaves the engine id unchanged.
+- Test: writing save files (`game/saves/…`, `savedata/…`) leaves the fingerprint unchanged.
+- Test: OS metadata (`.DS_Store`, `._*`, `Thumbs.db`, `desktop.ini`) leaves the fingerprint unchanged.
 - Test: the engine-declared id is read for:
   - Ren'Py (`options.rpy` `config.save_directory`)
   - Unity (`app.info`)
@@ -109,8 +116,8 @@ All tests use Swift Testing (`import Testing`, free `@Test func` with behavior n
   Parameterize over fixtures and check that `engineID` is non-nil. Don't compare against the literal plain text.
 - Test: a generic value such as `DefaultCompany` / `My project` or `TVP(KIRIKIRI)` yields no engine id.
 - Test: the stored fingerprint contains none of the plain names or engine-id text. Encode the `Fingerprint` to JSON and check that none of the fixture's folder names, file names or declared-id strings appear as substrings.
-- Test: the same folder under two different secrets gives different values.
-- Test: the same folder under the same secret gives equal values.
+- Test: the same folder under two different secrets gives different values, and under the same secret equal values.
+- Test: `LibrarySecret.loadOrCreate` creates once, then reads back the same secret.
 - Test: the Ren'Py key file is never the launcher exe, and the Unity key file is never the player exe.
 
 ### Matcher (§5.4)
@@ -121,11 +128,12 @@ Write these table-driven over in-memory state, one row per rule:
 - Test: an exact match of a folder under a new name or on another drive attaches to the existing game.
 - Test: an engine-id match attaches silently when the game has no live location on this device. This covers a patched and moved copy, and a newer version on another device.
 - Test: an engine-id match while the game is live elsewhere creates a new game with a suggestion, never a silent merge.
-- Test: name-set similarity at or above the threshold, with no engine id and a single candidate, attaches. Below the threshold, it doesn't.
+- Test: with no engine id and no exact match, the result is a new game with no suggestions (file names never match).
 - Test: two candidates create a new game plus a suggestion listing both.
 - Test: no match creates a new random id.
 - Test: a game with `deletedAt` is never a candidate.
-- Test: fingerprints beyond the cap keep the most recent ones.
+- Test: fingerprints beyond the cap keep the most recent ones, and re-adding an equal one moves it to newest.
+- Test: two unmatched folders get distinct random ids.
 
 ### Merge and split (§5.5)
 
@@ -138,7 +146,10 @@ Write these table-driven over in-memory state, one row per rule:
 
 ### Diagnostics hasher (§5.6)
 
-- Test: `FileHasher` equals an independent SHA-256 (CryptoKit `SHA256.hash(data:)` over the whole file, in the test), reports non-decreasing progress, and stops early on cancel.
+- Test: `FileHasher` equals an independent SHA-256 (CryptoKit `SHA256.hash(data:)` over the whole file, in the test) and reports non-decreasing progress.
+- Test: `FileHasher` stops early on cancel.
+
+Final count: `IdentityTests.swift` holds 18 test functions (several parameterized); the package runs 49.
 
 ## Implementation
 
@@ -150,22 +161,20 @@ public struct GameID: Hashable, Codable, Sendable { public let uuid: UUID }   //
 public struct Fingerprint: Codable, Sendable, Equatable {
     public var scheme: Int                   // bump to change how fingerprints are computed
     public var engineID: Keyed?              // engine-declared identity, keyed
-    public var exact: Keyed                  // listing with sizes + key-file partial hash, keyed
-    public var names: [Keyed8]               // keyed 8-byte digests of top-level entry names (≤256)
+    public var exact: Keyed                  // full content hash of the tree (saves excluded), keyed
 }
 public struct Keyed:  Hashable, Codable, Sendable { public let hex: String }   // HMAC-SHA256, 64 hex
-public struct Keyed8: Hashable, Codable, Sendable { public let hex: String }   // truncated to 16 hex
 ```
 
 - `GameID`:
   - Provide `static func random() -> GameID`.
   - Provide a `reportID` computed property: the first 8 characters of the lowercase UUID string. It is used later in crash issues (section 07). The id is random, so the report id reveals nothing.
-  - Provide a deterministic ordering helper, comparing lowercase `uuidString`. Merge-cycle breaking uses it.
+  - `GameID` is `Comparable` by lowercase `uuidString`; merge-cycle breaking uses it. It codes as the bare UUID string.
 - `Fingerprint`:
   - Expose `static let currentScheme: Int` (start at 1).
   - Expose `static let maxPerGame: Int` (8). This is the cap on fingerprints kept per game: one per distinct build seen, most recent kept.
 - `LibrarySecret`: 32 random bytes held as a `SymmetricKey`-compatible value.
-  - `static func loadOrCreate(at url: URL) throws -> LibrarySecret`. It creates the file once, written atomically, and later reads it back.
+  - `static func loadOrCreate(at url: URL) throws -> LibrarySecret`. It creates the file once and later reads it back. Creation writes a temp file and `link()`s it into place, so it never replaces an existing secret; a creator that loses the race reads the winner's.
   - Section 09 calls this with `Application Support/Eikon/library-secret`.
   - Also provide `init(bytes: Data)` so the scanner (section 04) can pass its fixed, documented scanner secret, and so tests can pass arbitrary secrets.
   - Never log or export the secret.
@@ -177,18 +186,18 @@ A caseless enum with `static func normalize(_ name: String) -> String`. It:
 
 1. applies Unicode NFC (`precomposedStringWithCanonicalMapping`)
 2. trims whitespace
-3. case-folds (`folding(options: [.caseInsensitive], locale: nil)`, or an equivalent locale-independent lowercase)
+3. case-folds (`folding(options: [.caseInsensitive], locale: nil)`), then NFC again so a normalized name normalizes to itself
 
 It is used for:
 
 - directory listing lookups (section 02's `FolderListing` should call it)
-- the name set and exact-signal listing below
+- the exact-signal paths below
 - the matcher's "same folder name" comparison
 - the import name clash check (section 09)
 
 ### 3. `KeyFile`
 
-The key file is the game-specific file whose size and partial hash go into the exact signal. It is chosen per engine as the **first entry in this table that exists**, looked up through `FolderListing`:
+The key file is the game's main data file, recorded in `DetectionResult.keyFile` for detection output and the scanner. (It was planned as the exact signal's sampled file; with full content hashing the fingerprint no longer uses it.) It is chosen per engine as the **first entry in this table that exists**, looked up through `FolderListing`:
 
 | Engine | Key file (first that exists) |
 |---|---|
@@ -202,6 +211,7 @@ The key file is the game-specific file whose size and partial hash go into the e
 - For Unity, `<stem>` is the main executable's stem. The Unity player exe and `UnityPlayer.dll` are never key files.
 - For Ren'Py, the launcher exe is never the key file.
 - For "main exe", use the Windows executable if present, otherwise the Linux one.
+- For Unity, if no `<stem>_Data` exists the first `*_Data` folder is used (`KeyFile.unityDataDirectory`, shared with `EngineDeclaredID`).
 - Wire it into `GameDetector` so `DetectionResult.keyFile` is populated for every detected game.
 
 ### 4. `EngineDeclaredID`
@@ -218,10 +228,10 @@ This reads the identity the game's engine uses for its own saves. It is the sign
 Details:
 
 - **Generic-value blocklist.** Windows version values are dropped when they are an engine's generic values, for example `TVP(KIRIKIRI)`, `Unity`, `DefaultCompany` and `My project`.
-  - The blocklist is one static table, compared through `NameNormalizer`.
+  - The blocklist is one static table (`EngineDeclaredID.genericValues`), compared through `NameNormalizer`. It holds Kirikiri, Unity, Ren'Py and GameMaker defaults.
   - Apply it to Unity `app.info` values too, since `DefaultCompany` / `My project` are Unity defaults.
   - A declared id made only of blocklisted parts is absent.
-  - Expose a way to know that the blocklist fired, so the scanner (section 04) can count "declared ids that hit the generic blocklist". For example, return an enum `.found(String)`, `.generic` or `.absent`.
+  - `EngineDeclaredID.read(detection:folder:)` returns `Result`: `.found(String)`, `.generic` or `.absent`, so the scanner (section 04) can count "declared ids that hit the generic blocklist". Unity `app.info` keeps empty lines, so an empty company line doesn't shift the product.
   - Scanner data extends this table later.
 - **Engine prefix.** The plain value is prefixed with the engine raw value and a colon (`"renpy:" + value`) before keying.
 - **Precedence.** The engine-specific source (Ren'Py, Unity, GameMaker) wins. Otherwise use the exe version info.
@@ -229,25 +239,15 @@ Details:
 
 ### 5. `FingerprintBuilder`
 
-`static func build(detection: DetectionResult, folder: URL, secret: LibrarySecret) throws -> Fingerprint`, with `scheme = Fingerprint.currentScheme`. Every signal is computed from the **game root** (`folder` + `detection.gameRoot`), never from the game folder's own name, so renaming the folder changes nothing.
+`static func build(detection: DetectionResult, folder: URL, secret: LibrarySecret, progress: (Double) -> Void = { _ in }, isCancelled: () -> Bool = { false }) throws -> Fingerprint`, with `scheme = Fingerprint.currentScheme`. Every signal is computed from the **game root** (`folder` + `detection.gameRoot`), never from the game folder's own name, so renaming the folder changes nothing.
 
 - **Engine id.** HMAC-SHA256(secret, `"<engine>:<value>"`) as `Keyed`, or nil.
-- **Exact signal.** HMAC-SHA256(secret, canonical bytes) of:
-  - the sorted top-level listing of the game root: normalized names with file sizes, and directories by name only
-  - the key file's size
-  - the SHA-256 of the key file's first 1 MiB and of its last 1 MiB
-
-  Rules for building it:
-  - Use unambiguous separators or length prefixes in the canonical encoding.
-  - Sort by normalized name.
-  - Never follow symlinks.
-  - If there is no key file, the listing alone forms the signal.
-  - Any real change to the game's files changes this value.
-- **Name set.** The normalized names of top-level entries in the game root, excluding generic names: `data`, `save`, `savedata`, `plugin`, `lib`, `game`, `renpy`, anything matching `*_Data`, and common DLLs (a static table, for example `unityplayer.dll`, `gameassembly.dll` and common runtime/D3D DLLs).
-  - Each name is keyed as HMAC-SHA256(secret, name), truncated to 8 bytes (16 hex) as `Keyed8`.
-  - Store sorted and de-duplicated, capped at 256 entries.
-  - It is used for Jaccard similarity when the engine id is missing.
-- **Cost.** A fingerprint reads a directory listing, a few small files and at most 2 MiB of the key file. No full-file hashing. All reads go through `FolderReader` and are read-only.
+- **Exact signal.** HMAC-SHA256(secret, canonical bytes) over the **whole tree** of the game root, depth-first in normalized-name order. Per entry: a kind byte and the length-prefixed normalized relative path; files add their size and full SHA-256 (streamed through `FileHasher`).
+  - Two folders share it only when they are 100% identical apart from what is excluded.
+  - Excluded at any depth: save folders (`FingerprintBuilder.saveFolders`: save, saves, savedata, savegame, savegames), dot-files (`.DS_Store`, `._*` AppleDouble) and OS metadata (`Thumbs.db`, `desktop.ini`).
+  - Symlinks are recorded by name and never followed.
+  - Any unreadable file throws `IdentityError.fileUnreadable`; nothing is silently dropped.
+- **Cost.** A fingerprint reads every byte of the game. Callers (import and library scans, section 09) run it in the background with `progress` (non-decreasing, 0…1) and `isCancelled` (checked between 1 MiB chunks, throws `CancellationError`). Game files are opened read-only with `O_NOFOLLOW`; the declared-id reads still go through `FolderReader`.
 - **Privacy.** Plain names and engine-id text never appear in the resulting `Fingerprint` or its JSON.
 
 ### 6. `IdentityMatcher` (pure)
@@ -262,17 +262,19 @@ public struct KnownGame: Sendable {
     public var isDeleted: Bool                 // deletedAt set → never a candidate
 }
 public struct LocationKey: Hashable, Sendable { public var driveID: UUID; public var folderName: String } // normalized
+public enum MatchRule { case exact, engineID }
 public enum MatchResult: Sendable, Equatable {
     case keep(GameID)                                   // rule 1
-    case attach(GameID, MatchRule)                      // rules 2–4, add fingerprint
-    case newGame(GameID, suggestions: [GameID])         // rule 5 (suggestions may be empty)
+    case attach(GameID, MatchRule)                      // rules 2–3, add fingerprint
+    case newGame(GameID, suggestions: [GameID])         // rule 4 (suggestions may be empty)
 }
 public static func match(fingerprint: Fingerprint, at location: LocationKey,
                          knownLocations: [LocationKey: GameID], games: [KnownGame],
                          mint: () -> GameID = GameID.random) -> MatchResult
 ```
 
-- `public static let nameSimilarityThreshold: Double = 0.8`.
+- `LocationKey` normalizes `folderName` in its initializer (`public private(set)`).
+- `match` expects ids already resolved through merge links. If `knownLocations` points at a deleted game, rule 1 is skipped.
 - Compare fingerprints only when their `scheme` values are equal.
 - Candidates are games that are not deleted. Deleted games (with `deletedAt` set) are never candidates, so a game re-imported after its data was deleted starts fresh.
 
@@ -287,14 +289,12 @@ public static func match(fingerprint: Fingerprint, at location: LocationKey,
 3. **Engine-id match.** The new `engineID` is non-nil and equals an `engineID` of one of exactly one game's fingerprints:
    - If that game has **no live location on this device**, attach silently and add the fingerprint. This covers a patched copy that was moved, renamed or re-imported, and a newer version from another device.
    - If that game **does** have a live location here, this is a different version sitting beside the known one. Create a **new** game with a suggestion naming that game. It is never a silent merge.
-4. **Name similarity.** The new fingerprint has no engine id, and the candidate fingerprint compared against has no engine id either. Name-set Jaccard (|A∩B| / |A∪B| over `names`) must be ≥ the threshold.
-   - Exactly one candidate game with no live location here: attach silently and add the fingerprint. This covers a patched and renamed or moved game from an engine with no declared id.
-   - A single similar candidate that *is* live here: treat it like rule 3's live case (new game plus suggestion).
-5. **Otherwise** mint a new game id.
-   - If more than one candidate matched under rule 2, 3 or 4, attach to none: create a new game with a suggestion listing all candidates.
+4. **Otherwise** mint a new game id.
+   - If more than one candidate matched under rule 2 or 3, attach to none: create a new game with a suggestion listing all candidates (sorted by id).
    - With no candidates, the suggestion list is empty.
+   - **File names never match and never suggest.** The planned name-similarity rule was dropped at the owner's decision: engine-standard layouts make unrelated games look alike, and files alone may identify a game only when they are 100% identical (rule 2).
 
-Evaluate each rule fully before falling to the next. For example, several exact matches go straight to rule 5's multi-candidate case, rather than falling through to rule 3.
+Evaluate each rule fully before falling to the next. For example, several exact matches go straight to rule 4's multi-candidate case, rather than falling through to rule 3.
 
 **Fingerprint cap.** A helper such as `static func adding(_ fp: Fingerprint, to list: [Fingerprint]) -> [Fingerprint]`:
 
@@ -317,10 +317,10 @@ Everything here is pure. Section 09 applies the results to the settings store an
   - `locations: [UUID: GameID]` (location id → game id)
   - `settings: [GameID: [String: Setting]]`
   - `links: [GameID: GameID]`
-- **`merge(_ a: GameID, into b: GameID)`:**
+- **`merge(_ a: GameID, into b: GameID)`** (both ids are first resolved through existing links):
   1. Set `links[a] = b`.
   2. Copy A's settings into B only for keys B has no value for. B's own values win.
-  3. Move A's fingerprints to B (de-duplicated, cap applied) and clear A's.
+  3. Move A's fingerprints to B (de-duplicated, cap applied, B's own builds kept newest) and clear A's.
   4. Point A's locations at B.
 - **`split(location:) -> GameID`:**
   1. Mint a new id.
@@ -332,9 +332,9 @@ Everything here is pure. Section 09 applies the results to the settings store an
 
 Both operations are rare and explicit ("Same game as…" and "This is a different game" in the game menu, section 13). They are never modal.
 
-### 8. `FileHasher` (diagnostics only)
+### 8. `FileHasher`
 
-Full SHA-256 is **not** part of identity. It is used by:
+Full SHA-256 streaming. `FingerprintBuilder` uses its internal `digest(of:isCancelled:opened:read:)` for the exact signal. The public `sha256(of:progress:isCancelled:)` is used by:
 
 - the scanner's `--hash` (section 04)
 - the "Verify files" action in game detail's developer area (section 13)
@@ -351,4 +351,5 @@ Requirements:
 - `make test-core` passes with the tests above.
 - `DetectionResult.keyFile` is populated by detection.
 - No plain name or engine-id text can reach a stored `Fingerprint`.
-- The public API above is available to sections 04 and 09: `FingerprintBuilder.build`, `IdentityMatcher.match`, the cap helper, `resolve`, merge/split, `LibrarySecret`, `FileHasher`, `NameNormalizer`, `KeyFile`, and `EngineDeclaredID` with its generic/absent distinction.
+- Files alone match only when 100% identical apart from saves and OS metadata.
+- The public API above is available to sections 04 and 09: `FingerprintBuilder.build`, `IdentityMatcher.match`, `IdentityMatcher.adding`, `IdentityMatcher.resolve`, `IdentityLedger.merge`/`split`, `LibrarySecret`, `FileHasher`, `NameNormalizer`, `KeyFile`, and `EngineDeclaredID` with its generic/absent distinction.

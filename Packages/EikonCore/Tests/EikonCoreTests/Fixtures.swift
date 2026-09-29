@@ -136,16 +136,30 @@ enum Fixtures {
     }
 
     /// FORM, then GEN8 (or another first chunk), an optional CODE chunk and a STRG chunk.
-    static func gameMaker(hasGEN8: Bool = true, hasCode: Bool) -> Data {
-        var chunks = Data()
-        func chunk(_ tag: String, _ size: Int) {
-            chunks.append(Data(tag.utf8))
-            chunks.append32(UInt32(size))
-            chunks.append(Data(count: size))
+    /// With `names`, GEN8 points its Name and DisplayName at those strings in STRG.
+    static func gameMaker(hasGEN8: Bool = true, hasCode: Bool, names: (name: String, displayName: String)? = nil) -> Data {
+        let gen8Size = names == nil ? 16 : 128
+        let strgStart = 8 + (8 + gen8Size) + (hasCode ? 16 : 0) + 8
+        var strings = Data()
+        var gen8 = Data(count: gen8Size)
+        if let names {
+            for (field, text) in [(40, names.name), (100, names.displayName)] {
+                let bytes = Data(text.utf8)
+                strings.append32(UInt32(bytes.count))
+                gen8.put32(UInt32(strgStart + strings.count), at: field)
+                strings.append(bytes)
+                strings.append(0)
+            }
         }
-        chunk(hasGEN8 ? "GEN8" : "OPTN", 16)
-        if hasCode { chunk("CODE", 8) }
-        chunk("STRG", 4)
+        var chunks = Data()
+        func chunk(_ tag: String, _ content: Data) {
+            chunks.append(Data(tag.utf8))
+            chunks.append32(UInt32(content.count))
+            chunks.append(content)
+        }
+        chunk(hasGEN8 ? "GEN8" : "OPTN", gen8)
+        if hasCode { chunk("CODE", Data(count: 8)) }
+        chunk("STRG", strings.isEmpty ? Data(count: 4) : strings)
         var data = Data("FORM".utf8)
         data.append32(UInt32(chunks.count))
         return data + chunks
@@ -160,9 +174,10 @@ enum Fixtures {
 
     enum RenPyEra { case scriptVersion, vcVersion, initPy, libEra }
 
-    /// A Ren'Py game whose stem is "Game". Exact eras record `version`.
-    static func renpy(_ era: RenPyEra, version: [Int] = [7, 4, 11], named name: String = "Sample",
-                      in dir: URL) throws -> URL {
+    /// A Ren'Py game whose stem is "Game". Exact eras record `version`. With
+    /// `saveDirectory`, game/options.rpy sets `config.save_directory` to it.
+    static func renpy(_ era: RenPyEra, version: [Int] = [7, 4, 11], saveDirectory: String? = nil,
+                      named name: String = "Sample", in dir: URL) throws -> URL {
         let root = dir.appendingPathComponent(name, isDirectory: true)
         let text = version.map(String.init)
         try write(pe(machine: peAMD64), to: "Game.exe", in: root)
@@ -170,6 +185,10 @@ enum Fixtures {
         try write("#!/bin/sh\nexec lib/game\n", to: "Game.sh", in: root)
         try write(Data([0x52, 0x50, 0x43, 0x32]), to: "game/script.rpyc", in: root)
         try write("# engine\n", to: "renpy/__init__.py", in: root)
+        if let saveDirectory {
+            try write("## Options\ndefine config.name = _(\"Sample\")\ndefine config.save_directory = \"\(saveDirectory)\"\n",
+                      to: "game/options.rpy", in: root)
+        }
 
         let linuxDir: String
         switch era {
@@ -196,9 +215,10 @@ enum Fixtures {
 
     enum UnityLayout { case mono, il2cpp, pre2017 }
 
-    /// A Unity game whose stem is "Game", with a larger GUI crash handler beside it.
-    static func unity(_ layout: UnityLayout, linux: Bool = false, named name: String = "Sample",
-                      in dir: URL) throws -> URL {
+    /// A Unity game whose stem is "Game", with a larger GUI crash handler beside it. With
+    /// `appInfo`, Game_Data/app.info holds that company and product.
+    static func unity(_ layout: UnityLayout, linux: Bool = false, appInfo: (company: String, product: String)? = nil,
+                      named name: String = "Sample", in dir: URL) throws -> URL {
         let root = dir.appendingPathComponent(name, isDirectory: true)
         try write(pe(machine: peAMD64), to: "Game.exe", in: root)
         try write(pe(machine: peAMD64, padTo: 64 << 10), to: "UnityCrashHandler64.exe", in: root)
@@ -215,6 +235,9 @@ enum Fixtures {
         case .pre2017:
             try write(Data(count: 64), to: "Game_Data/mainData", in: root)
             try write(pe(machine: peI386, dll: true), to: "Game_Data/Managed/Assembly-CSharp.dll", in: root)
+        }
+        if let appInfo {
+            try write("\(appInfo.company)\n\(appInfo.product)", to: "Game_Data/app.info", in: root)
         }
         if linux {
             try write(elf(machine: elfAMD64), to: "Game.x86_64", in: root)

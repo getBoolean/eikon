@@ -11,7 +11,7 @@ public struct FolderListing: Sendable {
     public struct Entry: Sendable, Equatable {
         /// The name as listed.
         public let name: String
-        /// `FolderListing.normalize(name)`.
+        /// `NameNormalizer.normalize(name)`.
         public let key: String
         public let kind: Kind
         public let size: UInt64
@@ -57,7 +57,7 @@ public struct FolderListing: Sendable {
                 continue
             }
             let name = child.lastPathComponent
-            entries.append(Entry(name: name, key: Self.normalize(name), kind: kind,
+            entries.append(Entry(name: name, key: NameNormalizer.normalize(name), kind: kind,
                                  size: UInt64(max(values.fileSize ?? 0, 0))))
         }
         self.url = url
@@ -67,21 +67,14 @@ public struct FolderListing: Sendable {
         }
     }
 
-    /// NFC plus case folding, and nothing else. NFC again after folding, which can
-    /// decompose, so a key normalizes to itself.
-    public static func normalize(_ name: String) -> String {
-        name.precomposedStringWithCanonicalMapping.folding(options: [.caseInsensitive], locale: nil)
-            .precomposedStringWithCanonicalMapping
-    }
-
     /// Case- and normalization-insensitive exact lookup of any kind except symlink.
     public func entry(named name: String) -> Entry? {
-        let key = Self.normalize(name)
+        let key = NameNormalizer.normalize(name)
         return entries.first { $0.key == key && $0.kind != .symlink }
     }
 
     public func file(named name: String) -> Entry? {
-        file(key: Self.normalize(name))
+        file(key: NameNormalizer.normalize(name))
     }
 
     /// Lookup by an already-normalized key.
@@ -95,7 +88,7 @@ public struct FolderListing: Sendable {
 
     /// Regular files with this extension (no dot), in sorted order.
     public func files(withExtension ext: String) -> [Entry] {
-        let ext = Self.normalize(ext)
+        let ext = NameNormalizer.normalize(ext)
         return entries.filter { $0.kind == .file && $0.pathExtension == ext }
     }
 

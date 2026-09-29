@@ -29,7 +29,8 @@ This section depends on the following. Use their APIs; do not re-implement them.
   - the main-executable exclusion table with per-rule hit counters
   - `Fixtures.swift` in `EikonCoreTests`, which synthesizes fake game folders
 - **section-03-identity** provides:
-  - `FingerprintBuilder` (keyed with a secret), `Fingerprint` (`exact`, `engineID`, `names`), `Keyed`/`Keyed8`
+  - `FingerprintBuilder` (keyed with a secret), `Fingerprint` (`exact`, `engineID`), `Keyed`
+  - **Note from section 03:** the exact signal is now a **full content hash of the whole game tree** (saves and OS metadata excluded), so building a fingerprint reads every byte. The scanner therefore builds fingerprints only under `--hash`; the default run uses `EngineDeclaredID.read` alone.
   - `EngineDeclaredID`, including its generic blocklist
   - `KeyFile`
   - `FileHasher` (streaming SHA-256 with progress and cancellation)
@@ -123,9 +124,8 @@ Suggested shape (signatures only; adjust names to fit sections 02 and 03):
 /// One scanned folder's contribution. Carries no folder name.
 public struct ScannedFolder: Sendable {
     public var detection: DetectionResult?        // nil = no game found
-    public var fingerprint: Fingerprint?          // under the fixed scanner secret
-    public var declaredIDWasGeneric: Bool         // declared id hit the generic blocklist
-    public var keyFileSHA256: String?             // only with --hash
+    public var declaredID: EngineDeclaredID.Result? // in memory only; never printed
+    public var fingerprint: Fingerprint?          // only with --hash, under the fixed scanner secret
 }
 
 public enum ScanOutcome: Sendable {
@@ -141,8 +141,9 @@ public struct CollectionSummary: Sendable {
 
 public enum CollectionScan {
     /// Treats `root` like a game drive: each immediate, non-dot subfolder goes through
-    /// GameDetector.detect (with the wrapper rule) and FingerprintBuilder under the
-    /// scanner secret. Synchronous and read-only. Returns .skipped if root is absent.
+    /// GameDetector.detect (with the wrapper rule) and EngineDeclaredID.read; with `hash`,
+    /// also FingerprintBuilder under the scanner secret (full reads). Synchronous and
+    /// read-only. Returns .skipped if root is absent.
     public static func run(root: URL, hash: Bool, progress: ((Int, Int) -> Void)?) -> ScanOutcome
 }
 ```
@@ -171,13 +172,13 @@ Put the scan driver (`CollectionScan.run`, or similar) in EikonCore rather than 
 - **Identity statistics:**
   - how many games have an engine-declared id, per engine
   - how many declared ids hit the generic blocklist. This comes from section 03's `EngineDeclaredID` and its blocklist. The scanner needs to know when a value was found but rejected as generic, so expose that from section 03's API if it isn't already, or compute it in the driver.
-  - how many folders share an exact fingerprint with another folder, and how many share an engine id with another folder (collision risk)
+  - how many share an engine id with another folder (collision risk; compared in memory by engine plus declared value, never printed)
+  - with `--hash`: how many folders share an exact fingerprint with another folder (identical copies)
 
 **Per-folder lines (`--per-folder`):**
 
-- One line per folder, **sorted by exact fingerprint**.
-- Each line holds the short exact fingerprint (a prefix of the keyed hex) and the engine.
-- With `--hash`, append the full SHA-256 of the key file.
+- One line per folder, in visit order, holding the engine.
+- With `--hash`, lines are **sorted by exact fingerprint** and each starts with the short exact fingerprint (a prefix of the keyed hex).
 - **Never** print the folder name, game root name, key-file path or declared-id text.
 
 **Scanner secret.** Fingerprints use a **fixed, documented scanner secret**, a constant defined next to the driver with a comment explaining it. Its output is then comparable across runs. It is never the app's library secret, and the app never uses it.
@@ -196,7 +197,7 @@ eikon-scan [--root PATH] [--per-folder] [--hash]
   - Visit folders in a deterministic order.
 - **Read-only:** go only through section 02's `FolderReader`/`FolderListing` and section 03's `FileHasher`, which open files read-only and never follow symlinks out of the folder. Never write, never set attributes, and never create caches under the root.
 - **`--hash`:**
-  - Runs `FileHasher` on each detected game's key file.
+  - Builds each detected game's `Fingerprint` (full content hash through `FileHasher`).
   - Progress goes to **stderr**, because hashing over SMB is slow. Stdout stays clean for parsing.
 - **Structure:** the top level is **synchronous**, with no `async` main and no Tasks, so detection avoids MainActor isolation friction under Swift 6. `main.swift` only parses arguments, calls the EikonCore driver, and prints `formatted(perFolder:)`.
 - **Errors:** a detection or read error on one folder must not abort the run. Count it in the output as an error count, with no name, and continue.

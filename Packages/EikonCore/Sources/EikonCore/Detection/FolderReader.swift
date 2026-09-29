@@ -3,7 +3,7 @@ import Darwin
 import Foundation
 
 enum ReadPurpose: Sendable, Hashable {
-    case binaryHeaders, versionResource, xp3Index, chunkHeaders, smallText
+    case binaryHeaders, versionResource, xp3Index, chunkHeaders, smallText, gen8Strings
 
     /// Bytes allowed per file, per call and in total.
     var budget: Int {
@@ -13,6 +13,7 @@ enum ReadPurpose: Sendable, Hashable {
         case .xp3Index: (8 << 20) + (4 << 10) // the compressed index plus its small headers
         case .chunkHeaders: 8 * 512
         case .smallText: 64 << 10
+        case .gen8Strings: 4 << 10
         }
     }
 }

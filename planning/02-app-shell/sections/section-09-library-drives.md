@@ -18,7 +18,7 @@ These must already be in place. Use their APIs; do not re-implement them.
 
 - **section-01-core-package.** Provides the `Packages/EikonCore` package, the EikonKit → EikonCore dependency, the test targets and the shared `Persisted` rules (§6.2 below): the format header, the rule that a future-format file is read-only, tolerant per-element decoding that keeps raw bad elements, and atomic write + fsync.
 - **section-02-detection.** Provides `GameDetector.detect(folder:) -> DetectionResult?`, `DetectionResult` (including `detectorVersion` and `keyFile`), `Engine`, `FolderListing`, and the test `Fixtures.swift` that synthesizes fake game folders.
-- **section-03-identity.** Provides `GameID`, `Fingerprint`, `Keyed`, `NameNormalizer`, `FingerprintBuilder` (HMAC under the library secret), the pure `IdentityMatcher` (the five matching rules), and the merge/split logic with `merged/` link resolution.
+- **section-03-identity.** Provides `GameID`, `Fingerprint`, `Keyed`, `NameNormalizer`, `FingerprintBuilder` (HMAC under the library secret), the pure `IdentityMatcher` (known location, exact, engine id; file names never match), and the merge/split logic with `merged/` link resolution.
 - **section-05-settings-store.** Provides `SettingsStore` with its per-game keys: `displayName`, `route.override`, `deletedAt` and `fp/<scheme>/<n>`. It also provides `removeAll(game:)` (which writes `deletedAt`), `fingerprints(game:)`, `addFingerprint(_:game:)` and the global `merged/<uuid>` key.
 - **section-06-route-picker.** Provides `RoutePicker.decide(detection:environment:override:)`, `RouteDecision`, `RouteEnvironment` and `RouteID`.
 
@@ -280,6 +280,7 @@ For each available drive, at launch and on scene activation, the scanner diffs t
 
 - It takes quiescent locations from a queue. The **currently viewed** location, set by the controller, jumps to the front.
 - For each location, it opens the drive's access token, runs `FingerprintBuilder` on the detected game root, closes the token, then runs `IdentityMatcher` against:
+  - **Note from section 03:** `FingerprintBuilder.build` hashes every file of the game (saves excluded), which can take minutes. Pass its `progress` to the location's UI state and an `isCancelled` that trips on `suspendBackgroundWork()` or removal; a cancelled location goes back on the queue and restarts later.
   - this device's locations
   - every known game's stored fingerprints from `SettingsStore`, excluding games with `deletedAt`
 - It applies the match result:

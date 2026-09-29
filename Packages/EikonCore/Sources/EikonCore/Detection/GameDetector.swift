@@ -11,7 +11,7 @@ struct EngineMatch {
 /// never logs, and deterministic regardless of directory listing order.
 public enum GameDetector {
     /// Bump whenever detection logic changes; stored results with an older version are recomputed.
-    public static let version = 1
+    public static let version = 2
 
     /// Detects the game in a game folder (an immediate child of a game drive). Checks the
     /// folder itself; if no engine markers or executable are there and the folder holds
@@ -50,7 +50,9 @@ public enum GameDetector {
         if match?.engine == .kirikiri, let exe = executables[.windows] {
             details.kirikiriFlavor = KirikiriDetector.flavor(reader, executable: exe.path)
         }
-        return DetectionResult(engine: match?.engine ?? .unknown, details: details, gameRoot: "",
-                               executables: executables, keyFile: nil, detectorVersion: version)
+        let engine = match?.engine ?? .unknown
+        return DetectionResult(engine: engine, details: details, gameRoot: "", executables: executables,
+                               keyFile: KeyFile.locate(engine: engine, executables: executables, listing: listing),
+                               detectorVersion: version)
     }
 }

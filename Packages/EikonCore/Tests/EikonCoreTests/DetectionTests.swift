@@ -13,7 +13,7 @@ private func detect(_ url: URL) throws -> DetectionResult? {
 }
 
 private func samePath(_ lhs: String?, _ rhs: String) -> Bool {
-    lhs.map(FolderListing.normalize) == FolderListing.normalize(rhs)
+    lhs.map(NameNormalizer.normalize) == NameNormalizer.normalize(rhs)
 }
 
 // MARK: Types and entry point
