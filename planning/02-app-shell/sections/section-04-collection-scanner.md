@@ -101,13 +101,14 @@ import Testing
   - Locate the repo with the `REPO_ROOT` pattern already in `tests/conftest.py` (`Path(__file__).resolve().parent.parent`).
   - Parse the markdown table under the heading `## Games to support, in priority order`. Its columns are `Engine | Folders | How it is recognized | Notes`. Take the `Engine` → `Folders` integers. Map engine display names (`Unity`, `Kirikiri`, `Ren'Py`, `GameMaker`, `BGI`) to the scanner's engine keys with a small mapping in the test. Do **not** hard-code the counts.
   - Run the scanner with `swift run --package-path Packages/EikonCore -c release eikon-scan --root /Volumes/Games`, or through `make scan-collection`, and parse the per-engine counts from its output. The scanner's output therefore needs a stable, easily parsed line per engine count. A simple `engine.<raw>: <n>` style works. Use one format and document it in `CollectionSummary`.
-  - Compare only the engines present in the table.
+  - Compare only the engines present in the table. The Unity row compares with `unity.unityplayer`, since the table counts Unity by `UnityPlayer.dll`.
 
 ## Implementation
 
 ### Files
 
-- Create `Packages/EikonCore/Sources/EikonCore/Scan/CollectionSummary.swift`: the pure summary and formatting.
+- Create `Packages/EikonCore/Sources/EikonCore/Scan/CollectionSummary.swift`: the pure summary and formatting (`ScannedFolder`, `CollectionSummary`).
+- Create `Packages/EikonCore/Sources/EikonCore/Scan/CollectionScan.swift`: the driver (`CollectionScan.run`, `ScanOutcome`, `scannerSecret`). Each folder detects into its own `ExclusionTally`, merged only on success.
 - Create `Packages/EikonCore/Sources/eikon-scan/main.swift`: the CLI.
 - Create `Packages/EikonCore/Tests/EikonCoreTests/ScannerTests.swift`.
 - Create `tests/test_collection_scan.py`.
@@ -124,17 +125,21 @@ Suggested shape (signatures only; adjust names to fit sections 02 and 03):
 /// One scanned folder's contribution. Carries no folder name.
 public struct ScannedFolder: Sendable {
     public var detection: DetectionResult?        // nil = no game found
+    public var hasUnityPlayer: Bool               // the game root holds UnityPlayer.dll/.so
     public var declaredID: EngineDeclaredID.Result? // in memory only; never printed
     public var fingerprint: Fingerprint?          // only with --hash, under the fixed scanner secret
+    public var failed: Bool                       // detect() threw
+    public var identityFailed: Bool               // detected, but declared id or fingerprint failed
 }
 
 public enum ScanOutcome: Sendable {
-    case skipped(root: String)                    // root absent → "skipped: <root> not mounted"
+    case skipped(root: String)                    // root absent → "skipped: <root> not mounted", exit 0
+    case unreadable(root: String)                 // root exists but can't be listed → stderr, exit 1
     case scanned(CollectionSummary)
 }
 
 public struct CollectionSummary: Sendable {
-    public init(folders: [ScannedFolder], exclusionHits: [String: Int])
+    public init(folders: [ScannedFolder], exclusions: ExclusionTally)
     // aggregate accessors used by tests (engine counts, il2cpp count, plugin counts, arch counts, noGame, exclusion hits, ...)
     public func formatted(perFolder: Bool) -> String
 }
@@ -175,9 +180,11 @@ Put the scan driver (`CollectionScan.run`, or similar) in EikonCore rather than 
   - how many share an engine id with another folder (collision risk; compared in memory by engine plus declared value, never printed)
   - with `--hash`: how many folders share an exact fingerprint with another folder (identical copies)
 
+**Output format:** one `key: count` line each (`engine.unity: 3`). Every engine and every exclusion rule is printed, even at zero. `errors` and `identity-errors` count failures without names.
+
 **Per-folder lines (`--per-folder`):**
 
-- One line per folder, in visit order, holding the engine.
+- One line per folder, in visit order, holding the engine, or `none` / `error`.
 - With `--hash`, lines are **sorted by exact fingerprint** and each starts with the short exact fingerprint (a prefix of the keyed hex).
 - **Never** print the folder name, game root name, key-file path or declared-id text.
 
@@ -234,6 +241,16 @@ This step validates detection on real data before any UI is built. It is a manua
    - **Kirikiri games with no `.xp3` files** (possible embedded XP3): these show up as `unknown` or "no game found".
 5. Optionally, run `EIKON_SCAN_COLLECTION=1 uv run pytest tests/test_collection_scan.py`.
 6. **Record findings by engine and count only.** Never write a folder name, title or per-folder line from the share into the repo, a commit message or an issue.
+
+### Reconciliation result (2026-09-29)
+
+Findings by engine and count only.
+
+- **The share is grouped, not flat.** It has 37 top-level folders. Most are group folders, and engine markers sit 2 to 6 levels below the share root (mostly at 3 and 4). A few hold disc images or archives, and one is unreadable. The owner decided the app stays flat: import copies games into the flat drive layout. The scanner stays flat too.
+- **A flat scan of the share root** finds Unity 1, unknown 7, no-game 28 and errors 1. Scanning each top-level group folder as its own root finds Unity 6 (5 IL2CPP), Kirikiri 1 and unknown 26. Neither can match the table's per-game counts. The table counts games wherever they sit, so it was left unchanged.
+- **Marker folders across the whole tree:** UnityPlayer.dll in 102 folders, `.xp3` in 91, `data.win` in 4, BGI.exe in 2, Ren'Py layouts in 6. These are more than the table's game counts, because copies and versions repeat and a Kirikiri game can have `.xp3` files in several folders. Nothing here points to a detection bug.
+- **Blocklist from real data:** the full Kirikiri ProductName strings ("TVP(KIRIKIRI) 2/Z core / Scripting Platform for Win32") were added to `EngineDeclaredID.genericValues`.
+- **Consequence:** `tests/test_collection_scan.py` (opt-in) fails against this share as it is organized. It becomes meaningful once games are imported into a flat drive, or when it is pointed at a flat copy of the collection.
 
 ## Done when
 

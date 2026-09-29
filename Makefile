@@ -16,6 +16,8 @@ help:
 	@echo "         test-swift test-scripts scan-collection [ARGS=<args>] archive ipa deb"
 	@echo "         package verify all publish"
 	@echo "         fetch-deps verify-deps pin-dep NAME=<name> TAG=<tag> [ASSET=<asset>] clean"
+	@echo "  scan-collection: read-only scan of /Volumes/Games (prints skipped when not mounted);"
+	@echo "                   ARGS=--hash also fingerprints every game (reads every file)"
 
 doctor:
 	@scripts/doctor.sh

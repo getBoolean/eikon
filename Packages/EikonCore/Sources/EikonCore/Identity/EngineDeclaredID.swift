@@ -14,6 +14,7 @@ public enum EngineDeclaredID {
     /// Scanner data extends this table.
     static let genericValues: Set<String> = Set([
         "TVP(KIRIKIRI)", "TVP(KIRIKIRI) 2", "TVP(KIRIKIRI) Z", "KIRIKIRI", "KIRIKIRI Z",
+        "TVP(KIRIKIRI) 2 core / Scripting Platform for Win32", "TVP(KIRIKIRI) Z core / Scripting Platform for Win32",
         "Unity", "Unity Technologies ApS", "DefaultCompany", "My project",
         "Ren'Py", "RenPy", "Python", "YoYo Games Ltd", "GameMaker", "Created with GameMaker Studio 2",
     ].map(NameNormalizer.normalize))
