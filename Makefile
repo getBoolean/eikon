@@ -8,12 +8,13 @@ SHELL := /bin/bash
 stub = echo "$@: not implemented yet (section $(1))" >&2; exit 1
 
 .PHONY: help doctor bootstrap version generated project check \
-	test test-swift test-scripts archive ipa deb package verify all \
+	test test-core test-swift test-scripts scan-collection archive ipa deb package verify all \
 	publish fetch-deps verify-deps pin-dep clean
 
 help:
-	@echo "Targets: doctor bootstrap version generated project check test test-swift"
-	@echo "         test-scripts archive ipa deb package verify all publish"
+	@echo "Targets: doctor bootstrap version generated project check test test-core"
+	@echo "         test-swift test-scripts scan-collection [ARGS=<args>] archive ipa deb"
+	@echo "         package verify all publish"
 	@echo "         fetch-deps verify-deps pin-dep NAME=<name> TAG=<tag> [ASSET=<asset>] clean"
 
 doctor:
@@ -41,13 +42,21 @@ check:
 	@uv run scripts/deps.py check
 	@scripts/version.sh --check
 
-test: test-swift test-scripts
+test: test-core test-swift test-scripts
+
+# EikonCore on the Mac; needs no project.
+test-core:
+	@swift test --package-path Packages/EikonCore
 
 test-swift: project
 	@scripts/test_swift.sh
 
 test-scripts:
 	@uv run pytest tests/
+
+# Detection over a games folder. Writes nothing into the repo.
+scan-collection:
+	@swift run --package-path Packages/EikonCore -c release eikon-scan --per-folder $(ARGS)
 
 archive:
 	@scripts/archive.sh

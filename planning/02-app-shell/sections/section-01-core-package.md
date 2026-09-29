@@ -196,6 +196,14 @@ public struct TolerantList<Element: Codable & Sendable>: Codable, Sendable {
 }
 ```
 
+**As built:**
+
+- `save(_ document:)` has no `over loaded:` parameter. Before writing, it reads the file on disk and throws `PersistedError.readOnly` if that file is read-only. That makes the rule hold even for callers that never loaded the file. Callers serialize saves to one URL.
+- A file is read-only (`Persisted.isReadOnly`) when it is a JSON object whose `format` is missing, not an integer (a Bool doesn't count), or newer than `currentFormat`. Data that isn't a JSON object at all stays overwritable: every build writes atomically, so such data can only be corruption, and refusing it would wedge the store.
+- `PersistedFile` stamps the top-level `format` over whatever the document encodes (`Stamped`). Documents must encode as a JSON object.
+- `TolerantList` keeps undecodable elements in a private `RawJSON` enum (null, bool, Int64, UInt64, Double, string, array, object) and re-emits them after the decoded ones. It relies on JSONDecoder not advancing the unkeyed container when a decode fails. The malformed-element test pins that behavior.
+- C slot layout: 48-byte slots (seq, time, a, b, event, 6 zero bytes, then an FNV-1a 64 check over bytes 0..<40). Fault file: a 24-byte header (`EKFT`, version 1, session id) followed by 24-byte records. The header documents both, along with the rules for readers (ignore a torn trailing record, read the previous file before `fault_open` truncates it) and callers (open and close only while no runtime can call `record`). `_Static_assert`s check that the atomics are lock-free.
+
 Notes:
 
 - Callers choose what to do when a save is refused. The settings store (section 05) forks to a new replica. Other stores keep working in memory. So `save` must refuse loudly (throw) rather than silently succeed.

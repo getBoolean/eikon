@@ -61,6 +61,8 @@ jobs:
         run: |
           brew list --formula ldid >/dev/null 2>&1 && brew uninstall --ignore-dependencies ldid || true
           brew install xcodegen ldid-procursus dpkg uv
+      - name: Core tests
+        run: make test-core
       - name: Build, package and verify
         run: make test-swift archive package verify
       - name: Upload artifacts

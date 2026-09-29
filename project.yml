@@ -11,6 +11,8 @@ configFiles:
 packages:
   EikonKit:
     path: Packages/EikonKit
+  EikonCore:
+    path: Packages/EikonCore
 targets:
   Eikon:
     type: application
@@ -27,6 +29,8 @@ targets:
     dependencies:
       - package: EikonKit
         product: EikonKit
+      - package: EikonCore
+        product: EikonCore
     # No preBuildScripts or postBuildScripts: nothing runs in a build phase.
 schemes:
   Eikon:
@@ -37,6 +41,7 @@ schemes:
       config: Debug
       targets:
         - package: EikonKit/EikonKitTests
+        - package: EikonCore/EikonCoreTests
     run:
       config: Debug
     archive:
