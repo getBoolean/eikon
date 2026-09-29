@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* System zlib, for Swift: detection inflates XP3 indexes; tests build zlib fixtures. */
+#include <zlib.h>
+
 /* ---- Render gate (in-flight guard) ------------------------------------------------------
    A render thread calls enter before encoding a frame and leave after committing it. The
    host closes the gate, then waits for in_flight to reach 0. enter increments before it

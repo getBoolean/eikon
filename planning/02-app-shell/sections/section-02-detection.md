@@ -455,6 +455,19 @@ public struct ExclusionTally: Sendable, Equatable {
 - `detect(folder:)` uses a throwaway tally.
 - Rule raw values are pattern codes (for example `"unins"`), never file names.
 
+## As built
+
+The code is in `Sources/EikonCore/Detection/`, the files listed above, plus `ByteReading.swift`, which holds the bounds-checked integer and string reads on `Data`. There are 31 test cases in `DetectionTests.swift`, counting parameterized ones. Deviations from the plan, and choices it left open:
+
+- **`FolderReader` is a `final class`, not a struct.** Budgets are cumulative, so the reader keeps state, and one reader serves one detection pass. It caches `ParsedBinary` per path (`binary(_:)`) and the version-resource strings (`versionStrings`), so each exe is parsed once per pass and section 03's `PEVersionResource.strings` reuses the result. Reads charge the bytes actually read. It opens files with `O_NOFOLLOW | O_NONBLOCK` and refuses anything that isn't a regular file. `text(_:)` reads the first 64 KiB of a larger file.
+- **`FolderListing`:** `files(withExtension:)` (regular files only) stands in for `entries(withExtension:)`. `file(named:)`, `directory(named:)` and `file(key:)` look up by normalized key. `normalize` is NFC, then fold, then NFC again, so it is idempotent. Unreadable folders throw `DetectionError.folderUnreadable`.
+- **Linux candidates:** only root files whose extension is empty or one of x86_64, x86, x86_32, x64, amd64, bin, elf, aarch64, arm64, arm32, appimage or run are probed for the ELF magic. Data files and `.so` libraries are never read or counted.
+- **Exclusions:** name rules apply after the binary parses, so the tally counts only real binaries. Specific rules come before the generic `setup`/`install` ones. Every folder evaluated as a possible root counts, including one that isn't the game.
+- **Kirikiri flavor** is resolved in `GameDetector` after main-exe selection. The fallback scan reads `.rdata`, `.data`, then `.rsrc`, within what is left of the versionResource budget.
+- **XP3:** before anything is allocated, the declared unpacked size is capped at packed × 1032 (zlib's maximum ratio).
+- **Ren'Py:** version files are found through the `game/` and `renpy/` listings. When `__init__.py` holds several `version_tuple`s (the 7.5/8.0 era), the lib layout decides between them: py3-*/python3.* picks major ≥ 8, and otherwise the lowest major wins. The "≤7.3" era is `from 0.0 through 7.3`. Plugin and extension names are de-duplicated by normalized key and sorted by it.
+- **`DetectionResult`** encodes `executables` in `GamePlatform.allCases` order. An unknown `RenPyVersionKind` drops the whole `renpyVersion`.
+
 ## Done when
 
 - All tests above pass with `make test-core` on the Mac, and in the scheme on the simulator.
