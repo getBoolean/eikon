@@ -65,7 +65,7 @@ Behaviors to cover:
    - i386 chooses `wine-box64`.
    - amd64 has no chosen route (`chosen == nil`), and its `wine-fex` candidate is unavailable with `needsJIT`.
 4. **Box64 is demoted, not removed.** With JIT usable, i386 chooses `wine-box64` in each of these three cases (three rows):
-   - `wine-fex` is gated out (failed `x18`)
+   - ~~`wine-fex` is gated out (failed `x18`)~~ **Dropped:** it contradicts the rules table. wine-box64 also requires `x18`, because the Box64 route still runs Wine's Windows ARM64 modules, which keep the TEB in `x18`. A failed `x18` blocks both Wine routes.
    - `wine-fex` is declined by its runtime
    - `wine-fex` is not built (planned) while `wine-box64` is built
 5. **An unmeasured required gate** gives `runnableWithWarnings`, with a `gateUnmeasured` reason naming that gate. Include a row where the gate is absent from the `gates` map, since missing means unmeasured.
@@ -147,7 +147,7 @@ Notes:
 
 ### `RouteRules` (one static table)
 
-Implement it as a caseless enum holding one static table: an array or dictionary of rule entries, one per `RouteID`.
+Implemented as a caseless enum with `rule(for: RouteID) -> Rule`, an exhaustive switch, so a new route is a compile error rather than a silent gap. Each `Rule` has a target, `needsJIT`, architecture-independent `gates` and `gatesByArchitecture`. `nativeRoute(for: Engine)` is an exhaustive switch too.
 
 | Route | Applies to | Needs JIT | Required gates |
 |---|---|---|---|
@@ -192,6 +192,8 @@ public enum RoutePicker {
    - The engine's native route comes first, if the engine has one.
    - Then come `wine-fex`, `wine-box64` and `linux-fex`.
    - When the engine has a native route, the Wine candidates behind it get the `nativeFirst` reason.
+   - Other engines' native routes (never runnable for this game) come last.
+   - Ordering reasons (`nativeFirst`, `fexPreferredWithJIT`) are added only to candidates that aren't `unavailable`, so they never appear beside a blocking reason or in `overrideWarnings`.
    - **When `jitUsable`**, `wine-box64` is still evaluated normally but is ordered after `wine-fex`, and gets `fexPreferredWithJIT`. This is a demotion, not a removal, so Box64 still wins when FEX is planned, declined or gated out.
 
    **Which candidates appear:** `candidates` should include every route that is relevant to the game, meaning the routes the device route table and the override picker can show. The simplest acceptable rule is to include every route and let the unavailable ones carry their reasons. The UI (sections 13 and 14) filters as it needs. Either way, the multi-platform Unity case must list both `wine-fex` and `linux-fex`.
@@ -203,7 +205,7 @@ public enum RoutePicker {
 
 4. **Override.** When `override` is non-nil:
    - The forced route's candidate becomes `chosen` whatever its verdict, and `isOverride = true`.
-   - Add `overriddenByUser` to the chosen candidate's reasons.
+   - Add `overriddenByUser` to the chosen candidate's reasons, in `chosen` and in its `candidates` entry.
    - `overrideWarnings` carries that candidate's reasons whenever its verdict is not `runnable`/`runnableWithWarnings`, which includes `planned` and `unavailable`. For a runnable forced route, `overrideWarnings` is empty.
    - The candidate order is unchanged.
 
@@ -228,6 +230,10 @@ public enum RoutePicker {
   - `notInThisBuild`: "Planned. Not in this build yet."
 
   The detail screen shows every reason, and the library row shows the verdict only. When adding new cases, keep them codes, with no text in EikonCore.
+
+## Tests
+
+`RoutePickerTests.swift`: a table of 11 chosen-route rows (including "a planned route never consults its runtime check") plus 10 focused tests for reasons, overrides, platforms and architectures.
 
 ## Done when
 
