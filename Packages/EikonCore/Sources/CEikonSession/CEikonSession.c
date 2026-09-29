@@ -1,15 +1,18 @@
 #include "CEikonSession.h"
 
 #include <errno.h>
+#include <sched.h>
 #include <fcntl.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 /* Everything below the render gate may run on a fault path: no malloc, no locks, no stdio. */
 
 _Static_assert(ATOMIC_INT_LOCK_FREE == 2, "fault fd and in-flight count must be lock-free");
 _Static_assert(ATOMIC_BOOL_LOCK_FREE == 2, "closed flag must be lock-free");
+_Static_assert(ATOMIC_LLONG_LOCK_FREE == 2, "breadcrumb seq must be lock-free");
 
 /* ---- Render gate ---- */
 
@@ -90,9 +93,58 @@ int eikon_breadcrumb_write(int fd, uint64_t seq, int64_t time,
     return result;
 }
 
+static _Atomic int breadcrumb_fd = -1;
+static _Atomic uint64_t breadcrumb_seq = 0;
+static _Atomic int32_t breadcrumb_in_flight = 0;
+
+/* Swaps the fd out, then waits until no writer that loaded the old fd is still using it,
+   so its number can't be reused by another open while a write is pending. */
+static void retire_fd(_Atomic int *slot, _Atomic int32_t *in_flight) {
+    int fd = atomic_exchange(slot, -1);
+    if (fd < 0) return;
+    while (atomic_load(in_flight) > 0) sched_yield();
+    close(fd);
+}
+
+int eikon_breadcrumbs_open(const char *path) {
+    eikon_breadcrumbs_close();
+    int fd = open(path, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0) return errno;
+    if (ftruncate(fd, (off_t)EIKON_BREADCRUMB_SLOTS * EIKON_BREADCRUMB_SLOT_SIZE) != 0) {
+        int error = errno;
+        close(fd);
+        return error;
+    }
+    atomic_store(&breadcrumb_seq, 0);
+    atomic_store(&breadcrumb_fd, fd);
+    return 0;
+}
+
+void eikon_breadcrumbs_append(uint16_t event, int64_t a, int64_t b) {
+    atomic_fetch_add(&breadcrumb_in_flight, 1);
+    int fd = atomic_load(&breadcrumb_fd);
+    if (fd < 0) {
+        atomic_fetch_sub(&breadcrumb_in_flight, 1);
+        return;
+    }
+    int saved_errno = errno;
+    struct timespec now;
+    int64_t millis = clock_gettime(CLOCK_REALTIME, &now) == 0
+        ? (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000 : 0;
+    errno = saved_errno;
+    uint64_t seq = atomic_fetch_add(&breadcrumb_seq, 1) + 1;
+    (void)eikon_breadcrumb_write(fd, seq, millis, event, a, b);
+    atomic_fetch_sub(&breadcrumb_in_flight, 1);
+}
+
+void eikon_breadcrumbs_close(void) {
+    retire_fd(&breadcrumb_fd, &breadcrumb_in_flight);
+}
+
 /* ---- Fault hook ---- */
 
 static _Atomic int fault_fd = -1;
+static _Atomic int32_t fault_in_flight = 0;
 
 static int write_all(int fd, const uint8_t *bytes, size_t count) {
     while (count > 0) {
@@ -130,8 +182,12 @@ int eikon_session_fault_open(const char *path, const uint8_t session_id[16]) {
 }
 
 void eikon_session_fault_record(int signal, uintptr_t pc, uintptr_t address) {
+    atomic_fetch_add(&fault_in_flight, 1);
     int fd = atomic_load(&fault_fd);
-    if (fd < 0) return;
+    if (fd < 0) {
+        atomic_fetch_sub(&fault_in_flight, 1);
+        return;
+    }
 
     int saved_errno = errno;
     uint8_t record[EIKON_FAULT_RECORD_SIZE] = {0};
@@ -143,9 +199,9 @@ void eikon_session_fault_record(int signal, uintptr_t pc, uintptr_t address) {
         written = write(fd, record, sizeof record);
     } while (written < 0 && errno == EINTR);
     errno = saved_errno;
+    atomic_fetch_sub(&fault_in_flight, 1);
 }
 
 void eikon_session_fault_close(void) {
-    int fd = atomic_exchange(&fault_fd, -1);
-    if (fd >= 0) close(fd);
+    retire_fd(&fault_fd, &fault_in_flight);
 }

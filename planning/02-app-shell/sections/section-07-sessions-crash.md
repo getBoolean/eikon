@@ -134,13 +134,15 @@ public struct SessionSentinel: Sendable {
 ```
 
 - `arm` creates the directory if needed. It also clears any leftover `breadcrumbs.bin`/`fault.bin` from an earlier session, so stale data can't be attributed to the new session.
-- `setPhase` rewrites the record with the new phase, using the same atomic write and fsync. The phase is what separates "killed in background" from a foreground crash, so it must be durable.
+- `setPhase` throws when there's no readable sentinel. It rewrites the record with the new phase, using the same atomic write and fsync. The phase is what separates "killed in background" from a foreground crash, so it must be durable.
 - `consumeAtLaunch`:
   1. Reads the record. If it is missing, return nil. If it is unreadable, remove the files and return nil.
   2. Reads the breadcrumbs snapshot and the fault record (validated against `record.sessionID`).
   3. Removes all three files whatever happened, and returns the result.
   
-  A second call therefore returns nil.
+  A second call therefore returns nil. `disarm` also fsyncs the directory.
+- **Caller rules (for sections 10 and 11):** consume at launch before any `arm`, because arming discards unconsumed evidence. Add the consumed session to `CrashHistory` straight away, because consuming deletes the files.
+- Dates in `sentinel.json` use the default (exact) JSON date encoding.
 - The sentinel does not open the breadcrumb or fault descriptors itself. `GameSession` (section 10) arms the sentinel, then opens both through the APIs below. Make the file URLs available, for example `breadcrumbsURL` and `faultURL`.
 
 ### 3. C helpers (`CEikonSession`)
@@ -160,6 +162,8 @@ void eikon_session_fault_close(void);
 ```
 
 If 01 used different names, keep 01's names and wire the Swift side to them. Any names added here should follow the `eikon_` prefix.
+
+> **As built.** Section 01 had a stateless `eikon_breadcrumb_write(fd, seq, time, event, a, b)` with a 48-byte slot (seq, time, a, b, event, FNV-1a 64 check word). This section added `eikon_breadcrumbs_open/append/close` on top of it, keeping the fd and an atomic seq in C statics. The layout is shared through offset macros (`EIKON_BREADCRUMB_OFFSET_*`, `EIKON_FAULT_OFFSET_*`, `EIKON_FAULT_RECORD_OFFSET_*`) rather than packed structs. Both writers count in-flight calls, and close swaps the fd to -1 and waits for them to drain, so a closed fd number is never written. The Swift reader also rejects a slot whose seq doesn't belong at its index.
 
 **Breadcrumb slots:**
 - The file holds a fixed number of slots (capacity **64**). A slot logically carries `(seq: UInt64, time: Int64, event: UInt16, a: Int64, b: Int64)`.
@@ -206,7 +210,7 @@ public enum Breadcrumbs {
 - `BreadcrumbEvent` is a **closed** set of app-defined events with **stable numeric codes**. Each case maps to `(code, a, b)` in one exhaustive switch, and back from `(code, a, b)` in another. Associated values are integers only, so no strings can reach the file. Keep the code↔case mapping in one place in this file, with a comment that codes are never reused or renumbered.
 - `read` skips empty slots, slots that fail the check word, and anything past a truncated end. It sorts by `seq`, so the ring order is recovered. It tolerates a missing file (returns empty).
 - Descriptor state lives in C. The Swift namespace is a thin wrapper, so no Swift global mutable state is needed and Swift 6 concurrency checking stays quiet.
-- A **fixed-size record** is also needed in `CrashIssue` (a line of codes and integers per breadcrumb) and in `CrashHistory` (the snapshot). `Breadcrumb` is `Codable` for history.
+- A **fixed-size record** is also needed in `CrashIssue` (a line of codes and integers per breadcrumb) and in `CrashHistory` (the snapshot). `Breadcrumb` is `Codable` for history, and `Breadcrumb.init(seq:time:event:)` builds one from an event.
 
 ### 5. `FaultRecord` (`Sessions/FaultRecord.swift`)
 
@@ -251,7 +255,7 @@ Classification, evaluated in this order:
 | Phase `running`, nothing else | `endedUnexpectedly` (crash or system kill) | yes |
 | Phase `background` | `killedInBackground` | no (history only) |
 
-- "Within the window of the last breadcrumb" means the last breadcrumb's time minus the latest `memoryWarning`'s time is at most `memoryWarningWindow`. Note the reference is the last breadcrumb, not the launch time: the next launch may come hours later.
+- "Within the window of the last breadcrumb" means the last breadcrumb's time minus the latest `memoryWarning`'s time is between 0 and `memoryWarningWindow`. A negative gap, from a backwards clock step, doesn't count. Note the reference is the last breadcrumb, not the launch time: the next launch may come hours later.
 - "Last `memorySample`" means the sample with the highest `seq`.
 - Only matching fault records ever reach `classify`, because `consumeAtLaunch` already filtered them by session id.
 - `code` values are stable identifiers used in the issue URL and title. The UI maps outcomes to localized strings elsewhere (section 12) through an exhaustive switch.
@@ -282,7 +286,7 @@ public final class CrashHistory: @unchecked Sendable {   // lock-guarded, file-b
 - `add` classifies with `SessionOutcome.classify`, inserts the entry, and trims that game's entries to the newest `limitPerGame`, ordered by the session's `startedAt` (ties broken by `recordedAt`). It then persists.
 - Persistence follows the shared `Persisted` rules from section 01:
   - The file carries `format: 1` and is written atomically.
-  - A newer-format file is loaded read-only and never rewritten; `add` still updates memory.
+  - A newer-format file is loaded read-only and never rewritten; `add` still updates memory. A file that exists but fails to load is also treated as read-only.
   - Entries decode per element, so an unreadable entry is kept raw and written back unchanged.
 - History stores game ids, codes and integers only. No display names.
 
@@ -332,6 +336,7 @@ public enum CrashIssue {
   | `breadcrumbs` | the last `maxBreadcrumbs`, one line each: `seq time code a b` (codes and integers only; relative time from session start is fine) |
 
 - **Explicit percent-encoding.** Build `percentEncodedQuery` by hand. Encode every value (and key) with an allowed set of only the RFC 3986 unreserved characters (`A–Z a–z 0–9 - . _ ~`). Everything else is encoded, including `+`, `&`, `=`, space and newline. Don't rely on `URLQueryItem` encoding, which leaves `+` and some others literal, and GitHub decodes `+` as a space.
+- **`droppedBreadcrumbs`** counts only crumbs dropped to fit the length limit, not those beyond `maxBreadcrumbs`.
 - **Length limit.** If the URL would exceed `maxURLLength`, drop breadcrumbs **oldest first** and rebuild until it fits. Report how many were dropped in `droppedBreadcrumbs`. The caller (section 11) then copies the full `DeviceReport` JSON to the clipboard and tells the user to paste it. If the URL still doesn't fit with zero breadcrumbs, return it anyway; the other fields are bounded and short.
 - The repository URL comes from the app's `EKRepositoryURL` Info.plist key (`https://github.com/getBoolean/eikon`), read by the caller. The builder only appends to it.
 
@@ -348,6 +353,10 @@ A GitHub issue form:
 - Before first use, the `crash` label must exist in `getBoolean/eikon`. That is an owner checklist item handled at landing (section 16), not code. Prefill from query parameters is verified once there as well.
 
 ---
+
+## Tests (as built)
+
+`SessionTests.swift`: a `.serialized` suite for everything that touches the process-wide C descriptors (sentinel, the classification table, ring order, torn slot, truncated file, fault hook), plus free tests for the memory window, history trimming, and the issue URL (full field set, reserved characters, adaptive overflow trimming, report id only).
 
 ## Checklist
 

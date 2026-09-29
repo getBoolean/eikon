@@ -1,5 +1,7 @@
 # Section 11: Crash report controller
 
+> **From section 07 (as built):** consume the sentinel at launch before any `arm`, because arming discards unconsumed evidence. Add the consumed session to `CrashHistory` right after consuming, because consuming deletes the files. `SessionSentinel.setPhase` throws when the sentinel is missing, so surface that rather than ignore it. The breadcrumb and fault writers are safe to call from any thread while `close` runs.
+
 ## Summary
 
 This section adds `CrashReportController`, the EikonKit-side consumer of the crash-recording primitives from section 07. At app launch it:

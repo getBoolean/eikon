@@ -1,5 +1,7 @@
 # Section 10: Runtime protocol, render gate and game-session host
 
+> **From section 07 (as built):** consume the sentinel at launch before any `arm`, because arming discards unconsumed evidence. Add the consumed session to `CrashHistory` right after consuming, because consuming deletes the files. `SessionSentinel.setPhase` throws when the sentinel is missing, so surface that rather than ignore it. The breadcrumb and fault writers are safe to call from any thread while `close` runs.
+
 ## Goal
 
 This section builds the contract that every later runtime split plugs into, plus the full-screen host that runs a game session. The runtime splits are 03 (Kirikiri), 06–08 (Wine), 10 (Ren'Py), 13 (Linux) and 14 (Box64). It covers:

@@ -1,0 +1,63 @@
+name: Crash report
+description: A game session that ended unexpectedly. Usually prefilled by the app.
+title: "Crash: "
+labels: [crash]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not include game titles, folder names or file names.** The game appears only as its report id.
+        If the app said some details didn't fit, paste the report it copied to your clipboard in the notes.
+  - type: input
+    id: outcome
+    attributes:
+      label: Outcome
+    validations:
+      required: true
+  - type: input
+    id: engine
+    attributes:
+      label: Engine
+  - type: input
+    id: arch
+    attributes:
+      label: Architecture
+  - type: input
+    id: route
+    attributes:
+      label: Route
+  - type: input
+    id: game
+    attributes:
+      label: Game report id
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: App version
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS
+  - type: input
+    id: install
+    attributes:
+      label: Install method
+  - type: input
+    id: jit
+    attributes:
+      label: JIT
+  - type: textarea
+    id: fault
+    attributes:
+      label: Fault
+  - type: textarea
+    id: breadcrumbs
+    attributes:
+      label: Breadcrumbs
+      render: text
+  - type: textarea
+    id: notes
+    attributes:
+      label: What were you doing?
