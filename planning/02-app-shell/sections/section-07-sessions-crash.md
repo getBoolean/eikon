@@ -1,5 +1,7 @@
 # section-07-sessions-crash: Session sentinel, breadcrumbs, fault hook, outcomes, crash history, issue URL
 
+> **Revised after section 12 (owner's decision):** the issue URL may also carry the game's display name, through `CrashIssue.url(..., gameName:)` and the optional `name` field in `crash.yml`. The user reviews the issue before submitting it, so sharing the name is their consent. Breadcrumbs, the fault file and history stay title-free, and folder names, fingerprints and hashes never go into the issue.
+
 ## Background
 
 Eikon is an iPhone/iPad app that will run Windows, Linux and native-engine games **inside the app process**. So a game crash ends the whole app, and iOS jetsam kills can't be caught. Crash reporting therefore happens **on the next launch**:

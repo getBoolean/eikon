@@ -50,8 +50,8 @@ The SwiftUI `CrashBanner` view and the crash-history list on the game detail scr
   | Phase `background` | `killedInBackground` | no (history only) |
 
 - **Privacy rules. These are hard constraints.**
-  - A game's display name appears **only on screen**, in the banner. It never enters the issue URL, the logs or the history file.
-  - The issue carries only the **report id**: the first 8 characters of the random game id. It never carries file hashes, fingerprints or folder names.
+  - A game's display name appears on screen, in the banner, and in the GitHub issue that *Report on GitHub* prefills. The user reviews the issue in Safari and chooses to submit it, so sharing the name is their consent (owner's decision, after section 12). It never enters the logs or the history file.
+  - The issue identifies the game by its **report id** (the first 8 characters of the random game id) and its display name. It never carries file hashes, fingerprints or folder names.
   - The user reviews the issue in Safari before submitting.
 - **Persistence location.** History lives at `Library/Application Support/Eikon/sessions/history.json` and follows the shared persisted-file rules (a `format` header, atomic write, and a future format is never rewritten). All of that is implemented by section 07's `CrashHistory`; this section only calls it.
 - **Repository URL.** It comes from the `EKRepositoryURL` key in `App/Info.plist` (`https://github.com/getBoolean/eikon`).
@@ -85,7 +85,7 @@ Follow the owner's testing rule: a few tests that cover behavior only.
 
 Useful checks that stay behavioral:
 - After launch, the sentinel files are gone, whichever outcome it was. Section 07's consume already guarantees this, so assert it only if it's cheap.
-- *Report on GitHub* passes the opener a URL whose query has a `game` value equal to the report id. The query contains no display name.
+- *Report on GitHub* passes the opener a URL whose query has a `game` value equal to the report id and a `name` value equal to the display name.
 - When the builder reports dropped breadcrumbs, the fake pasteboard receives the device report and the controller flags that the user should paste it.
 
 Not tested automatically:
@@ -201,8 +201,8 @@ The only code this section writes is the closure-building helper, if one is want
 ## Acceptance
 
 - The three tests above pass under `make test` (the simulator EikonKit suite).
-- No code path puts the display name, a folder name, a fingerprint or a file hash into the issue URL or into history.
-- Manual check, done in section 16: after a simulated crash in the developer test session and a relaunch, the banner appears with no "Try…" action, since it is a `test` record. *Report on GitHub* opens a prefilled issue that carries only codes and the report id.
+- No code path puts a folder name, a fingerprint or a file hash into the issue URL or into history, or the display name into history.
+- Manual check, done in section 16: after a simulated crash in the developer test session and a relaunch, the banner appears with no "Try…" action, since it is a `test` record. *Report on GitHub* opens a prefilled issue that carries codes and the report id (no name, since it is a test session).
 
 ## As built
 
@@ -224,3 +224,4 @@ The only code this section writes is the closure-building helper, if one is want
   - the live `Dependencies` wiring, including a missing or invalid `EKRepositoryURL`
   - surfacing `CrashHistory.unreadableFiles`, because an unreadable history keeps new entries for the current launch only
 - **Known limits, for section 16 to judge:** breadcrumbs beyond the last 20 are dropped silently, and the clipboard fallback copies the device report without breadcrumbs.
+- **Game name in issues** (owner's decision, after section 12). `report` passes the game's display name to `CrashIssue.url(..., gameName:)`, which fills the new optional `name` field in `crash.yml`. Test sessions pass none. The user reviews the issue before submitting it and can delete the name. History, logs and the clipboard device report stay title-free.

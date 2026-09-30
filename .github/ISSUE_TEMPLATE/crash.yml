@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Do not include game titles, folder names or file names.** The game appears only as its report id.
+        **Before submitting, check for and remove any personal information in file paths.**
         If the app said some details didn't fit, paste the report it copied to your clipboard in the notes.
   - type: input
     id: outcome
@@ -32,6 +32,11 @@ body:
       label: Game report id
     validations:
       required: true
+  - type: input
+    id: name
+    attributes:
+      label: Game
+      description: Filled in by the app. Delete it if you'd rather not share it.
   - type: input
     id: app
     attributes:

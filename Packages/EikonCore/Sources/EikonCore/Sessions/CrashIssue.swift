@@ -1,7 +1,8 @@
 import Foundation
 
-/// Builds a prefilled GitHub issue URL. Takes no title, folder name, fingerprint or hash:
-/// the game appears only as its report id.
+/// Builds a prefilled GitHub issue URL. The game appears as its report id, plus its display
+/// name when the caller passes one: the user reviews the issue before submitting it, so
+/// sharing the name is their choice. Never a folder name, fingerprint or hash.
 public enum CrashIssue {
     public static let maxURLLength = 7_500
     /// The last N breadcrumbs considered before length trimming.
@@ -43,11 +44,13 @@ public enum CrashIssue {
         game.reportID
     }
 
-    public static func url(repository: URL, entry: CrashEntry, device: Device, reportID: String) -> Built {
+    public static func url(repository: URL, entry: CrashEntry, device: Device, reportID: String,
+                           gameName: String? = nil) -> Built {
         var crumbs = Array(entry.breadcrumbs.sorted { $0.seq < $1.seq }.suffix(maxBreadcrumbs))
         var dropped = 0
         while true {
-            let url = build(repository: repository, entry: entry, device: device, reportID: reportID, crumbs: crumbs)
+            let url = build(repository: repository, entry: entry, device: device, reportID: reportID,
+                            gameName: gameName, crumbs: crumbs)
             if url.absoluteString.count <= maxURLLength || crumbs.isEmpty {
                 return Built(url: url, droppedBreadcrumbs: dropped)
             }
@@ -57,7 +60,7 @@ public enum CrashIssue {
     }
 
     private static func build(repository: URL, entry: CrashEntry, device: Device, reportID: String,
-                              crumbs: [Breadcrumb]) -> URL {
+                              gameName: String?, crumbs: [Breadcrumb]) -> URL {
         let record = entry.record
         let start = record.startedAt
         var fields: [(String, String)] = [
@@ -69,6 +72,11 @@ public enum CrashIssue {
             ("arch", record.architecture?.rawValue ?? ""),
             ("route", record.route),
             ("game", reportID),
+        ]
+        if let gameName, !gameName.isEmpty {
+            fields.append(("name", gameName))
+        }
+        fields += [
             ("app", "\(device.appVersion) (\(device.appBuild)) \(device.appCommit)"),
             ("device", "\(device.modelIdentifier), \(device.osVersion) (\(device.osBuild))"),
             ("install", device.installMethod),

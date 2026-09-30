@@ -105,12 +105,16 @@ public final class CrashReportController: ObservableObject {
         if self.banner?.id == banner.id { self.banner = nil }
     }
 
-    /// Opens a prefilled GitHub issue carrying codes and the report id only. When
-    /// breadcrumbs had to be dropped, the full device report goes to the clipboard.
+    /// Opens a prefilled GitHub issue with codes, the report id and the game's display name.
+    /// The user reviews it in Safari and chooses to submit, so the name is shared by
+    /// consent; it goes nowhere else. When breadcrumbs had to be dropped, the full device
+    /// report goes to the clipboard.
     public func report(_ entry: CrashEntry) {
         let device = dependencies.deviceReport()
+        let record = entry.record
+        let name = record.route == SessionRecord.testRoute ? nil : dependencies.displayName(record.gameID)
         let built = CrashIssue.url(repository: dependencies.repository, entry: entry, device: Self.issueDevice(device),
-                                   reportID: CrashIssue.reportID(for: entry.record.gameID))
+                                   reportID: CrashIssue.reportID(for: record.gameID), gameName: name)
         if built.droppedBreadcrumbs > 0 {
             dependencies.copyToPasteboard(device)
         }

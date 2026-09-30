@@ -59,7 +59,7 @@ private func controller(_ sentinel: SessionSentinel, effects: Effects, decision:
                         repository: URL = URL(string: "https://github.com/example/eikon")!) -> CrashReportController {
     CrashReportController(dependencies: .init(
         sentinel: sentinel, history: CrashHistory(directory: sentinel.directory), repository: repository,
-        routeDecision: { _ in decision }, displayName: { _ in "Shown Only On Screen" },
+        routeDecision: { _ in decision }, displayName: { _ in "Shown On Screen And In Reports" },
         setRouteOverride: { effects.overrides.append(($0, $1)) }, deviceReport: sampleReport,
         openURL: { effects.opened.append($0) }, copyToPasteboard: { _ in effects.copied += 1 }))
 }
@@ -68,7 +68,8 @@ private func controller(_ sentinel: SessionSentinel, effects: Effects, decision:
 
 @MainActor @Suite struct CrashReportControllerTests {
     /// A session left running publishes a banner for that game and route, keeps a history
-    /// entry, and reports with the report id and never the display name.
+    /// entry, and reports with the report id and the display name (the user reviews the
+    /// issue before sharing it).
     @Test func highSeveritySessionPublishesBanner() throws {
         let game = GameID.random()
         let sentinel = try previousSession(phase: .running, game: game)
@@ -85,7 +86,7 @@ private func controller(_ sentinel: SessionSentinel, effects: Effects, decision:
         let url = try #require(effects.opened.first)
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         #expect(query.first { $0.name == "game" }?.value == CrashIssue.reportID(for: game))
-        #expect(!url.absoluteString.removingPercentEncoding!.contains("Shown Only On Screen"))
+        #expect(query.first { $0.name == "name" }?.value == "Shown On Screen And In Reports")
     }
 
     @Test func backgroundKillAddsHistoryWithoutBanner() throws {

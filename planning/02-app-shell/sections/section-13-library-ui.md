@@ -33,12 +33,12 @@ Key concepts the UI shows:
 - **Routes.** Each game has a `RouteDecision`: a chosen candidate, all candidates with their verdicts and reasons, and an optional user override.
   - Verdicts are `runnable`, `runnableWithWarnings`, `planned` and `unavailable`.
   - Any route may be forced. If a forced route can't run, the app warns and still allows it.
-- **Report id.** The first 8 characters of the random game id. It is the only game identifier that ever leaves the device, for example in crash issues.
+- **Report id.** The first 8 characters of the random game id. It is the only game identifier that leaves the device on its own. Crash issues also carry the display name, because the user reviews the issue and chooses to submit it.
 
 ### Constraints that apply to every view here
 
 - **No program titles anywhere except on screen.**
-  - Display names and folder names are titles in practice. They may appear in the UI, but never in logs, breadcrumbs, reports, issue text or the clipboard device report.
+  - Display names and folder names are titles in practice. They may appear in the UI, and the display name in the crash issue the user reviews before submitting, but never in logs, breadcrumbs, the device report or the clipboard device report.
   - Don't `print` or `Logger` any name.
 - **iOS 15 minimum.**
   - Use `NavigationView` and `ObservableObject`/`@ObservedObject`/`@EnvironmentObject`/`@StateObject`.
@@ -129,7 +129,7 @@ What stands in for tests:
    - Add a USB-C folder as a game drive and its games appear. When it is unplugged they show "Drive not connected". When it is replugged they are available again.
    - A folder dropped into "On My iPad/Eikon" through Files appears on return to the app, after the quiescence delay.
    - The same folder name on the built-in drive and on the USB drive, with different contents, shows the same-or-different suggestion.
-   - After a simulated crash (from section 14's developer action), the relaunch shows the banner. *Report on GitHub* opens a prefilled issue that contains only codes and the report id.
+   - After a simulated crash (from section 14's developer action), the relaunch shows the banner. *Report on GitHub* opens a prefilled issue that contains codes and the report id (no name for a test session).
 
 If you factor out a pure presentation helper with real branching, such as launch-button availability, you may add one small behavioral test for it in EikonKitTests, but only if the helper lives in EikonKit. The owner's rule is to keep tests few, so this is optional. Never assert exact strings or constants.
 

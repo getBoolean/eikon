@@ -233,10 +233,12 @@ private func query(_ url: URL) -> [String: String] {
 @Test func reservedCharactersRoundTrip() {
     var crash = entry()
     crash.record.route = "a+b & c=d"
-    let built = CrashIssue.url(repository: repository, entry: crash, device: device, reportID: "r+e&p=o t")
+    let built = CrashIssue.url(repository: repository, entry: crash, device: device, reportID: "r+e&p=o t",
+                               gameName: "Name & more = 100%")
     let fields = query(built.url)
     #expect(fields["route"] == "a+b & c=d")
     #expect(fields["game"] == "r+e&p=o t")
+    #expect(fields["name"] == "Name & more = 100%")
 }
 
 @Test func longReportsDropTheOldestBreadcrumbsToFit() {

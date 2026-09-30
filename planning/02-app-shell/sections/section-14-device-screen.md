@@ -62,7 +62,7 @@ Verification works like this instead:
 3. **Device checks** (manual). Record the results in a device report's notes, by engine and hash only:
    - Run test session. Pulling down Control Center pauses it: the pattern freezes and the gate is closed.
    - Going Home backgrounds it. After 30 s in the background, returning shows "Tap to resume". After resuming, the **command-buffer error count is 0**.
-   - Simulate crash during session. The app aborts about 5 s after the session starts. On relaunch the crash banner appears (outcome "ended unexpectedly", route `test`, no "Try another route" action). *Report on GitHub* opens a prefilled issue that contains only codes and the report id.
+   - Simulate crash during session. The app aborts about 5 s after the session starts. On relaunch the crash banner appears (outcome "ended unexpectedly", route `test`, no "Try another route" action). *Report on GitHub* opens a prefilled issue that contains codes and the report id (no name for a test session).
 
 Do not add unit tests for the route-row helper or the view code.
 
