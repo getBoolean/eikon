@@ -90,3 +90,9 @@
 "report.share" = "Share report";
 "report.copied" = "Copied";
 "report.error" = "Couldn't build the report.";
+
+/* Game session host */
+"session.tapToResume" = "Tap to resume";
+"session.menu" = "Game menu";
+"session.resume" = "Resume";
+"session.quit" = "Quit";

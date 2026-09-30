@@ -480,3 +480,13 @@ private final class ProgressThrottle: @unchecked Sendable {
         }
     }
 }
+
+extension LibraryController: SessionBackgroundWork {
+    public func suspendForSession() {
+        suspendBackgroundWork()
+    }
+
+    public func resumeAfterSession() {
+        resumeBackgroundWork()
+    }
+}

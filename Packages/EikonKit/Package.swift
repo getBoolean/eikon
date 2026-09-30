@@ -12,7 +12,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "CEikonJIT", linkerSettings: [.linkedFramework("Security")]),
-        .target(name: "EikonKit", dependencies: ["CEikonJIT", .product(name: "EikonCore", package: "EikonCore")]),
+        .target(name: "EikonKit", dependencies: [
+            "CEikonJIT",
+            .product(name: "EikonCore", package: "EikonCore"),
+            .product(name: "CEikonSession", package: "EikonCore"),
+        ]),
         .testTarget(name: "EikonKitTests", dependencies: ["EikonKit", "CEikonJIT"]),
     ],
     swiftLanguageModes: [.v6]

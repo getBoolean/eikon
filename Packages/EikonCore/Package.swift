@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.iOS(.v15), .macOS(.v13)],
     products: [
         .library(name: "EikonCore", targets: ["EikonCore"]),
+        .library(name: "CEikonSession", targets: ["CEikonSession"]),
         .executable(name: "eikon-scan", targets: ["eikon-scan"]),
     ],
     targets: [

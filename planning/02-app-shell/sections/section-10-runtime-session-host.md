@@ -359,3 +359,31 @@ Subscribe to `SceneEvents` when the session starts and cancel the subscription o
   - Pulling down Control Center pauses the session.
   - Going Home backgrounds it.
   - After 30 s in the background, returning shows "Tap to resume", and the command-buffer error count stays 0.
+
+## As built
+
+**Files.**
+- EikonKit `Runtime/`: `GameRuntime.swift`, `RuntimeRegistry.swift`, `RenderGate.swift`, `SceneEvents.swift`, `SessionRecorder.swift`, `GameSession.swift`, `GameSessionHostViewController.swift` and `SessionPresentation.swift`.
+- App: `App/Session/SessionPresenter.swift`.
+- Tests: `RuntimeTests.swift` (3 render-gate tests and 1 registry test) and `SessionHostTests.swift` (5 lifecycle tests, 1 presentation test and 1 `LiveSessionRecorder` test).
+- `Package.swift` changes: EikonCore now exports a `CEikonSession` library product, and EikonKit depends on it.
+- `App/Localizable.strings` gains `session.*` keys. Section 12 moves them.
+- `LibraryController` conforms to `SessionBackgroundWork`.
+
+**Deviations and additions.**
+- **`GameRuntime` refines `SendableMetatype`** (Swift 6.4), so the registry can capture `T.check`. The docs add: hold the host weakly, give render threads the gate itself, and a `@MainActor` runtime class marks `route` and `check` `nonisolated`.
+- **`SessionRecorder.setPhase` throws.** `GameSession` logs a code and asserts in debug.
+- **`LiveSessionRecorder.arm`** requires only the sentinel. If the ring or fault file fails to open, it logs a code and the launch continues.
+- **Teardown.** `GameSession` runs one shared teardown task. Every `end` waits for it, it waits for an in-flight `launch` before `stop()`, and it releases the runtime.
+- **`runtimeDidEnd`** marks the session synchronously (`markRuntimeEnded`), so no later pause, resume or stop reaches the runtime.
+- **Backgrounding** re-drains the render gate before the phase becomes `background`.
+- **Memory samples** skip while paused, and the timer runs in common run-loop modes.
+- **`LiveSceneEvents(scene:)`** takes a non-optional scene.
+- **`SessionPresentation.present`** is async and returns after the presentation completes.
+- **`RuntimeRegistry`**: the published `builtRoutes` doubles as the change signal. `checks` starts every route's check at once.
+- **`SessionPresenter`**:
+  - It opens the drive once, so the game root and the session's access share one resolution. `openAccess` returns that token's closer.
+  - It checks for an active session first.
+  - It records `noteLaunched` only after a successful start.
+  - `launchTest` runs sessions that need no drive, with route `"test"`.
+- **`FakeRuntime`** in the tests receives its log through a `@TaskLocal`.
