@@ -21,6 +21,8 @@ There is no JIT bypass and no exploit. When JIT is available, it comes from Dopa
 
 Devices need iOS 15.0 or later.
 
+> **Untested on iOS 15 and 16.** The app is built for iOS 15, but it has only been tested on iOS and iPadOS 17 and later: no iOS 15 or 16 device is available, and current Xcode has no simulator older than iOS 17. Reports from iOS 15 or 16 devices are welcome.
+
 ## Building
 
 ```sh
