@@ -112,6 +112,17 @@ public final class SettingsStore: @unchecked Sendable {
         locked { map.effectiveEntry(SettingPath.key(game: game, name: SettingPath.deletedAtName)) != nil }
     }
 
+    /// Whether the game has user data: an effective key besides fingerprints and `deletedAt`.
+    public func hasSettings(game: UUID) -> Bool {
+        locked {
+            map.entries.keys.contains { key in
+                guard let path = SettingPath(key), path.game == game, path.name != SettingPath.deletedAtName,
+                      !path.name.hasPrefix(SettingPath.fingerprintPrefix) else { return false }
+                return map.effectiveEntry(key) != nil
+            }
+        }
+    }
+
     /// Games with at least one effective key that are not deleted.
     public func knownGames() -> [UUID] {
         locked {

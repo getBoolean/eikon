@@ -439,3 +439,31 @@ On scene `.active` the app calls `reevaluateDriveStates()` and `rescan()`. Also 
 - Never log `folderName`, drive labels, display names or plain fingerprint signals. Log codes and counts only.
 - Failure codes are app-defined enums.
 - Tests print no folder names in assertion messages beyond the generic fixture names.
+
+## As built
+
+**Files.**
+- EikonCore `Library/`: `GameDrive.swift`, `GameLocation.swift`, `LibraryIndex.swift`, `FolderAccess.swift`.
+- EikonKit `Library/`: `DriveManager.swift`, `DriveScanner.swift`, `FingerprintWorker.swift`, `ImportCoordinator.swift`, `LibraryController.swift`, `LibraryIdentity.swift`, `LiveFolderAccess.swift`.
+- `Runtime/GameDataCleanup.swift` and `Settings/SettingsController.swift`.
+- `App/Info.plist` gains the two file-sharing keys.
+- Tests: `EikonCoreTests/LibraryIndexTests.swift` (2 tests) and `EikonKitTests/LibraryTests.swift` (24 tests, one per behavior listed above).
+
+**Deviations and additions.**
+- **Split files.** The fingerprint worker has its own file. `LibraryIdentity` (EikonKit) holds the matcher inputs, merge and split. `LibraryContext` bundles the index, settings store, secret and clock.
+- **Synchronous components.** `DriveScanner.scanAll()` and `FingerprintWorker.processNext()` are synchronous, so the tests drive them deterministically. The controller runs them off the main actor, and `worker.start()` drains the queue in the background.
+- **Fixtures.** The EikonKit tests can't import section 02's `Fixtures` (it lives in EikonCoreTests), so `LibraryTests` builds a tiny Ren'Py-style folder itself.
+- **`DriveKind` decoding.** An unknown kind fails to decode, so `TolerantList` keeps that drive raw and writes it back, rather than falling back to another kind. `IdentityState` falls back to `pending` as planned.
+- **Unreadable index files** are set aside as `<name>.unreadable-<time>` and started over. Newer-format files are never touched.
+- **Provisional ids.** `GameLocation.isProvisional` marks quick-pass ids. Only a provisional game with no settings, no fingerprints and no other location merges silently into an exact match. Anything else gets a suggestion.
+- **Worker checks.** The worker rebuilds if the folder changed since the scan settled on it, or changed while hashing. It discards its result if the location was removed or re-identified meanwhile.
+- **Imports settle at once.** An import seeds the new location's content stamp as settled, so it needs no quiescence wait. The controller schedules a follow-up scan whenever a location is still waiting for quiescence.
+- **Drive safety.** Drives may not overlap (`DriveRefusal.overlapsDrive`), and deleting files never removes a folder that is or holds another drive's root. The built-in drive can't be relinked.
+- **Copying.** Import clones with `copyfile(COPYFILE_CLONE_FORCE | COPYFILE_NOFOLLOW)`, falling back to a chunked, cancellable copy opened `O_NOFOLLOW`. Symlinks in the source are skipped. The background task is an injectable `BackgroundActivity`, with `LiveBackgroundActivity` on UIKit.
+- **Controller API differences.**
+  - `DriveManager.state(of:)` is cache-only.
+  - The controller also publishes `settling` (detected folders without an id yet) and `fingerprintProgress`.
+  - Added `noteLaunched(location:)`, which sets `lastUsedAt`.
+  - `LibraryController.start()` runs the startup order.
+- **`SettingsStore.hasSettings(game:)`** was added in EikonCore for the silent-merge check.
+- **`LibraryPaths`** (in `SettingsController.swift`) resolves `Documents/` and `Application Support/Eikon`.
