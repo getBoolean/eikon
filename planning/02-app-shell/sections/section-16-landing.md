@@ -78,7 +78,7 @@ The "Constraints" section currently says, in the **No program titles** bullet: "
     - Each game is an immediate subfolder of a drive, or sits inside one wrapper folder there.
     - Import **copies** a game into a drive the user picks.
     - Games on a USB drive run from the drive.
-  - **Crash reports.** The only identifier is a report id: the first 8 characters of the random game id. They never carry file hashes or fingerprints.
+  - **Crash reports.** A game is identified by a report id (the first 8 characters of the random game id) and, in the issue the user reviews before submitting, its display name. They never carry file hashes, fingerprints or folder names.
 - **Consistency pass (owner review).** Other sentences still say "keyed by the game's hash":
   - "Cloud saves": "Syncs, per game and keyed by the game's hash"
   - "Privacy": "Remote paths use game hashes, never titles"
@@ -163,7 +163,7 @@ Then run the opt-in pytest from "Tests first" item 2 and confirm it passes.
 `.github/ISSUE_TEMPLATE/crash.yml` (from section 07) is an issue form:
 - `name: Crash report`
 - `labels: [crash]`
-- field `id`s matching the URL builder's fields: `outcome`, `engine`, `arch`, `route`, `game`, `app`, `device`, `install`, `jit`, `fault`, `breadcrumbs`
+- field `id`s matching the URL builder's fields: `outcome`, `engine`, `arch`, `route`, `game`, `name`, `app`, `device`, `install`, `jit`, `fault`, `breadcrumbs`
 - a free-text "What were you doing?" field
 
 The app builds `<repo>/issues/new?template=crash.yml&labels=crash&title=…&<field>=<value>…` with explicitly percent-encoded values.
@@ -173,8 +173,8 @@ The app builds `<repo>/issues/new?template=crash.yml&labels=crash&title=…&<fie
 2. **Prefill works.** From a real simulated-crash banner on the device (step 5), tap *Report on GitHub* and confirm in Safari that:
    - the template, label and title are applied
    - every field above is prefilled, with reserved characters (`+`, `&`, `=`) intact
-   - the `game` field is the 8-character report id
-   - no display name, folder name, fingerprint or file hash appears anywhere
+   - the `game` field is the 8-character report id, and `name` holds the game's display name (empty for a test session)
+   - no folder name, fingerprint or file hash appears anywhere
 
    Don't submit the issue unless the owner wants a real test issue.
 3. **Fallback.** If a field doesn't prefill, the fallback is the clipboard device report, which the banner already tells the user to paste. Record which fields failed. If the cause is a mismatch between the field ids and the URL builder, fix it in `crash.yml` or `CrashIssue`. If GitHub doesn't support prefill for that field type, note it under the plan's risks.
@@ -203,7 +203,7 @@ Use original test content where possible. Where a real game from the share is us
   - Going Home backgrounds it. After 30 s in the background, returning shows "Tap to resume", and the command-buffer error count is 0.
 - **Simulated crash** (Developer → simulate a crash):
   - Relaunch shows the crash banner.
-  - *Report on GitHub* opens a prefilled issue containing only codes and the report id. This doubles as step 4's prefill check.
+  - *Report on GitHub* opens a prefilled issue containing codes and the report id (no name, since it is a test session). This doubles as step 4's prefill check.
 
 **Filing:**
 1. On each device used, export the device report from This device (**Copy report** / **Share report**). It now includes `gates`, which is expected to be empty because nothing writes gates in 02.
