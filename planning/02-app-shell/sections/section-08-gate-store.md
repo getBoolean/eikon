@@ -212,3 +212,18 @@ The `gates` field already exists in schema version 1, so filling it is not a sch
 - `GateStoreTests` pass on the simulator. The new `DeviceReportTests` case passes, and the existing `fixtureContract` and `roundTripAndPrivacy` pass unchanged.
 - `make test` is green, and the app target still builds with its unchanged `DeviceReport.make` call.
 - No code in 02 calls `record` outside tests.
+
+## As built
+
+Files match the plan: `Packages/EikonKit/Sources/EikonKit/Gates/GateStore.swift` (new), `DeviceReport.swift` (`make` gains `gates: [String: GateResult] = [:]`), `GateStoreTests.swift` (new), `DeviceReportTests.swift` (+`reportIncludesGateStoreResults`). `App/StatusView.swift` and `tests/fixtures/device-report.json` are unchanged.
+
+Deviations from the plan, from code review:
+- **Unreadable file self-heals.** A `gates.json` that fails to decode starts empty and writable, unlike `CrashHistory`, so gates don't go unsaved for good. `PersistedFile.save` still refuses to overwrite a newer-format file.
+- **`BuildStamp.app` includes the commit**: `"version (build) commit"`, with the commit left out when it reads "unknown". Development builds often reuse a build number across binaries.
+- **Unreadable build identity.** If the version, build or OS build reads "unknown", `BuildStamp.live()` appends a per-process UUID, so a pass counts only in the run that measured it.
+- **Dates.** `measuredAt` is stored as ISO-8601 through a custom `Codable` on the private `StoredGate`, because `PersistedFile` uses default date encoding. `record` truncates `measuredAt` to whole seconds so memory matches disk.
+- **Duplicates.** `states()` and `current()` resolve duplicate gate names first-wins. `record` keeps one decoded entry per name, and `TolerantList` writes undecodable raw entries after it.
+- **`onChange`** runs on a private serial queue, one call at a time.
+- **`entries()`** returns `[GateEntry]`, a public struct with `name`, `result` and `stamp` and a public init.
+
+Tests: `GateStoreTests` has 4 tests (the plan's 2, the optional unknown-name round trip, and a corrupt-file self-heal test). `DeviceReportTests` has 1 new test. `make test` is green.

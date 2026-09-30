@@ -19,7 +19,8 @@ public struct DeviceReport: Codable, Sendable, Equatable {
 
     /// Assembles a report from facts that have already been gathered.
     public static func make(app: AppInfo, installMethod: InstallMethod, evidence: InstallEvidence,
-                            jit: JITStatus, system: DeviceSystem, now: Date) -> DeviceReport {
+                            jit: JITStatus, system: DeviceSystem, now: Date,
+                            gates: [String: GateResult] = [:]) -> DeviceReport {
         let seconds = now.timeIntervalSince1970.rounded(.down)
         return DeviceReport(
             schemaVersion: currentSchemaVersion,
@@ -34,7 +35,7 @@ public struct DeviceReport: Codable, Sendable, Equatable {
             install: InstallInfo(method: installMethod, evidence: evidence),
             jit: jit,
             memory: MemoryInfo(availableBytes: system.availableMemoryBytes()),
-            gates: [:],
+            gates: gates,
             notes: nil
         )
     }

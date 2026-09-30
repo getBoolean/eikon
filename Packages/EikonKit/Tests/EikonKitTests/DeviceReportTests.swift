@@ -39,6 +39,22 @@ private struct FixedDeviceSystem: DeviceSystem {
     try expectPrivacy(try live.encode())
 }
 
+@Test func reportIncludesGateStoreResults() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let gates = GateStore(directory: directory, current: BuildStamp(app: "A1", os: "O1"))
+    let measured = GateResult(passed: false, detail: "trapped", measuredAt: Date(timeIntervalSince1970: 1_768_470_030))
+    gates.record(.x18, measured)
+
+    let report = DeviceReport.make(
+        app: AppInfo(version: "0.1.0", build: "12", commit: "0123abc", packageKind: "ipa",
+                     bundleIdentifier: "com.getboolean.eikon"),
+        installMethod: .simulator,
+        evidence: InstallEvidence(bundlePath: "", homeDirectory: "", markers: []),
+        jit: .placeholder, system: FixedDeviceSystem(), now: Date(), gates: gates.current()
+    )
+    #expect(try DeviceReport.decode(report.encode()).gates["x18"] == measured)
+}
+
 @Test func fixtureContract() throws {
     let url = try repoFile("tests/fixtures/device-report.json")
     let fixtureData = try Data(contentsOf: url)
