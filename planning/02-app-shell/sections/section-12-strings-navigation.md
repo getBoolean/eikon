@@ -181,3 +181,28 @@ Scene phase (`.onChange(of: scenePhase)`):
 - The app opens on Library in a sidebar layout on iPad and a stack on iPhone, with four entries.
 - The `EikonApp.init` order matches the list above, `.active` rescans, and `.background` flushes settings.
 - `make test` passes.
+
+## As built
+
+**Files.**
+- `App/en.lproj/Localizable.strings` (moved, with a new header and new keys) and `App/en.lproj/Localizable.stringsdict`, which covers games, files, bytes and drives.
+- `App/Strings/`: `L10n.swift` (the shared lookup helpers), `RouteStrings.swift` (which also holds `JITStrings`), `GateStrings.swift`, `EngineStrings.swift`, `CrashStrings.swift`, `LibraryStrings.swift` and `StringsPreviews.swift` (DEBUG only).
+- `App/RootView.swift`, `App/AppServices.swift` and `App/EikonApp.swift`.
+- `App/StatusView.swift`: the inner `NavigationView` moved into the previews, and the preview helper is now `@MainActor`, which fixes a pre-existing warning.
+
+**Deviations and additions.**
+- **`AppServices`** holds the wiring, and `AppState` in `EikonApp.swift` creates it.
+  - The order is JIT facts, then runtimes (none), then settings, gates, library, crash history and `CrashReportController` (which consumes the sentinel), then `SessionPresenter`, then `library.start()` (staging cleanup, drive states, worker, scan).
+  - It also holds `AppRouteEnvironment`, the app's `RouteEnvironmentSource`. Route decisions recompute when gates change, when JIT usability changes, and when runtimes register.
+- **Scene phases.**
+  - `.active`: re-evaluate drives and rescan, after startup, one refresh at a time, and not during a game session.
+  - `.background`: flush settings.
+- **Unreadable files** (owner's rule). They are gathered once after wiring and shown in one alert, offering "Keep files" or "Start over". An unreadable library secret stops startup on its own warn-first screen, which offers Start over, keeping a backup and reopening the data.
+- **`status.title`** now reads "This device", since it names the sidebar entry.
+- **Extra maps:** `LibraryStrings` also maps `DriveRefusal` and `ImportOutcome`, for section 13.
+- **Placeholders:** Library, Game drives and Credits are placeholders until sections 13 and 15.
+- **Verification:**
+  - `make test` passes.
+  - `make package` and `make verify` pass.
+  - The app bundle has `en.lproj/Localizable.strings` and `.stringsdict`, and no top-level strings file.
+  - On the simulator, the app opens with localized text, and a corrupted `gates.json` shows the warning with the file left untouched.

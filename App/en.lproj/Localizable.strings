@@ -1,0 +1,216 @@
+/* Eikon's English source strings. Keys are namespaced: status.*, install.*, jit.*, device.*,
+   report.* (01); library.*, drives.*, import.*, identity.*, game.*, route.*, gate.*,
+   engine.*, arch.*, crash.*, credits.*, developer.*, session.* (02); app.* for app-wide
+   startup text and storage.* for the unreadable-file warning. Core code returns codes and
+   enums only; App/Strings/ maps them to these keys. */
+
+"status.title" = "This device";
+
+/* Section headers */
+"status.section.app" = "App";
+"status.section.install" = "Install";
+"status.section.jit" = "JIT";
+"status.section.device" = "Device";
+"status.section.report" = "Report";
+
+/* App section */
+"status.app.version" = "Version";
+"status.app.version.format" = "%1$@ (%2$@)";
+"status.app.commit" = "Commit";
+"status.app.packageKind" = "Package kind";
+"status.app.bundleId" = "Bundle ID";
+
+/* Shared values */
+"status.value.unknown" = "unknown";
+"status.value.yes" = "yes";
+"status.value.no" = "no";
+
+/* Install section */
+"install.method.label" = "Detected method";
+"install.method.dopamine" = "Dopamine";
+"install.method.rootlessJailbreak" = "rootless jailbreak";
+"install.method.trollStore" = "TrollStore";
+"install.method.trollStoreLite" = "TrollStore Lite";
+"install.method.sideloaded" = "sideloaded";
+"install.method.simulator" = "simulator";
+"install.method.unknown" = "unknown";
+
+/* JIT section */
+"jit.state.usable" = "Usable";
+"jit.state.notUsable" = "Not usable";
+"jit.pending" = "Waiting for TrollStore…";
+
+"jit.source.label" = "Source";
+"jit.source.none" = "none";
+"jit.source.dopamine" = "Dopamine";
+"jit.source.rootlessJailbreak" = "rootless jailbreak";
+"jit.source.trollStore" = "TrollStore";
+"jit.source.externalEnabler" = "external enabler";
+"jit.source.preexisting" = "already enabled at launch";
+"jit.source.unknown" = "unknown";
+
+"jit.csDebugged.label" = "CS_DEBUGGED";
+"jit.seen.atLaunch" = "at launch";
+"jit.seen.afterTrollStoreRequest" = "after TrollStore request";
+"jit.seen.onForeground" = "on returning to the app";
+
+"jit.probe.label" = "Probe";
+"jit.probe.notRun" = "not run";
+"jit.probe.passed" = "passed";
+"jit.probe.failed" = "failed";
+
+"jit.txm.label" = "TXM";
+"jit.txm.present" = "present";
+"jit.txm.absent" = "absent";
+"jit.txm.unknown" = "unknown";
+"jit.txm.enforced" = "enforced";
+"jit.txm.notEnforced" = "not enforced";
+
+"jit.retryJIT" = "Retry JIT";
+"jit.retryProbe" = "Retry probe";
+
+/* One cause-and-fix text per JITReasonCode */
+"jit.reason.dopamineJITOff" = "Dopamine didn't enable JIT for Eikon. Turn on “Allow JIT in Apps” in Dopamine's settings, make sure tweak injection isn't disabled for Eikon and the device isn't in safe mode, then relaunch Eikon. Dopamine 2.0 doesn't provide JIT; update to 2.1 or later.";
+"jit.reason.rootlessJailbreakNoJIT" = "This jailbreak didn't enable JIT for Eikon. Features that need JIT are unavailable; everything else still works.";
+"jit.reason.trollStoreRequestPending" = "Asking TrollStore to enable JIT…";
+"jit.reason.trollStoreTimedOut" = "TrollStore didn't enable JIT. Update TrollStore to 2.0.12 or later and make sure its URL scheme is enabled in TrollStore's settings, then tap Retry JIT.";
+"jit.reason.sideloadedNoJIT" = "JIT isn't enabled for this install. Features that need JIT are unavailable; everything else still works.";
+"jit.reason.txmEnforced" = "This device requires a debugger to approve JIT code. Enabling JIT with an enabler won't make it usable here yet. Native routes still work.";
+"jit.reason.txmUndetermined" = "Eikon couldn't confirm whether this device requires debugger approval for JIT, so JIT is treated as unavailable to be safe. Native routes still work. A device report helps fix this.";
+"jit.reason.probeSkippedAfterCrash" = "The last launch ended during the JIT check, so it was skipped this time. Tap Retry probe to run it again.";
+"jit.reason.probeFailed" = "JIT appears to be enabled, but a test of it failed (details below). Tap Retry probe, and please share a device report.";
+"jit.reason.unknownInstallNoJIT" = "Eikon couldn't tell how it was installed, and JIT isn't enabled. Features that need JIT are unavailable; everything else still works.";
+"jit.reason.simulator" = "JIT is never enabled in the simulator.";
+
+/* Device section */
+"device.model" = "Model identifier";
+"device.chip" = "Chip";
+"device.os" = "iOS";
+"device.os.format" = "%1$@ (%2$@)";
+"device.memory" = "Available memory";
+
+/* Report section */
+"report.copy" = "Copy report";
+"report.share" = "Share report";
+"report.copied" = "Copied";
+"report.error" = "Couldn't build the report.";
+
+/* Game session host */
+"session.tapToResume" = "Tap to resume";
+"session.menu" = "Game menu";
+"session.resume" = "Resume";
+"session.quit" = "Quit";
+
+/* Root navigation */
+"library.title" = "Library";
+"drives.title" = "Game drives";
+"credits.title" = "Credits";
+"app.startupFailed.title" = "Eikon couldn't open its data";
+"app.startupFailed.message" = "The app's data folder couldn't be opened (code %@). Free up some storage if the device is full, then relaunch Eikon.";
+"storage.unreadable.secretMessage" = "Eikon won't change this file, so if you edited it by hand you can fix it and relaunch:\n%@\n\nOr start over: the file is kept as a backup beside it and Eikon makes a new one. Games are then identified again; their settings stay.";
+"storage.unreadable.stillUnreadable" = "Some files couldn't be set aside, so they are still unchanged.";
+
+/* Files that couldn't be read */
+"storage.unreadable.title" = "Some data files couldn't be read";
+"storage.unreadable.message" = "Eikon won't change these files, so if you edited one by hand you can fix it and relaunch:\n%@\n\nOr start over: each file is kept as a backup beside it, and Eikon saves new ones in their place.";
+"storage.unreadable.keep" = "Keep files";
+"storage.unreadable.startOver" = "Start over";
+
+/* Routes */
+"route.id.native-kirikiri" = "Kirikiri (native)";
+"route.id.native-renpy" = "Ren'Py (native)";
+"route.id.wine-fex" = "Wine with FEX";
+"route.id.wine-box64" = "Wine with Box64";
+"route.id.linux-fex" = "Linux with FEX";
+"route.id.test" = "Test session";
+"route.verdict.runnable" = "Ready";
+"route.verdict.runnableWithWarnings" = "Ready, with warnings";
+"route.verdict.planned" = "Planned";
+"route.verdict.unavailable" = "Can't run";
+"route.reason.engineNotHandled" = "This route doesn't run %@ games.";
+"route.reason.needsWindowsBinary" = "Needs a Windows program, and this game has none.";
+"route.reason.needsLinuxBinary" = "Needs a Linux program, and this game has none.";
+"route.reason.architectureUnsupported" = "Can't run %@ programs.";
+"route.reason.needsJIT" = "Needs JIT, which this install doesn't have: %@.";
+"route.reason.needsJIT.noReason" = "Needs JIT, which this install doesn't have.";
+"route.reason.box64Only32Bit" = "Without JIT, only 32-bit Windows games can run.";
+"route.reason.fexPreferredWithJIT" = "Slower than Wine with FEX; used if that route can't run.";
+"route.reason.gateFailed" = "Failed on this device (%@).";
+"route.reason.gateFailed.stale" = "Failed on this device before an update. Not re-checked yet.";
+"route.reason.gateUnmeasured" = "Not yet verified on this device (%@). It may not work.";
+"route.reason.notInThisBuild" = "Planned. Not in this build yet.";
+"route.reason.nativeFirst" = "The native route for this engine comes first.";
+"route.reason.overriddenByUser" = "You chose this route.";
+"route.decline.generic" = "This runtime can't run this game (%@).";
+
+/* Gates */
+"gate.name.x18" = "x18 check";
+"gate.name.guestWindow" = "window check";
+"gate.name.generic" = "%@ check";
+"gate.state.passed" = "Passed";
+"gate.state.failed" = "Failed";
+"gate.state.failedStale" = "Failed before an update";
+"gate.state.unmeasured" = "Not checked yet";
+
+/* Engines and binaries */
+"engine.unity" = "Unity";
+"engine.kirikiri" = "Kirikiri";
+"engine.renpy" = "Ren'Py";
+"engine.gameMaker" = "GameMaker";
+"engine.bgi" = "BGI";
+"engine.unknown" = "Unknown engine";
+"engine.unity.mono" = "Mono";
+"engine.unity.il2cpp" = "IL2CPP";
+"engine.kirikiri.krkr2" = "Kirikiri 2";
+"engine.kirikiri.krkrZ" = "Kirikiri Z";
+"engine.kirikiri.unknown" = "Kirikiri (version unknown)";
+"engine.renpy.exact" = "Version %@";
+"engine.renpy.era" = "Version range %@";
+"engine.gameMaker.vm" = "VM";
+"engine.gameMaker.yyc" = "YYC";
+"engine.platform.windows" = "Windows";
+"engine.platform.linux" = "Linux";
+"arch.i386" = "32-bit x86";
+"arch.amd64" = "64-bit x86";
+"arch.arm64" = "ARM64";
+"arch.other" = "Other architecture";
+
+/* Crashes */
+"crash.outcome.crashed" = "The game crashed.";
+"crash.outcome.likelyMemoryKill" = "The game was probably closed for using too much memory.";
+"crash.outcome.endedUnexpectedly" = "The game ended unexpectedly.";
+"crash.outcome.killedInBackground" = "The game was closed while in the background.";
+
+/* Library */
+"library.status.ready" = "Ready";
+"library.status.identifying" = "Identifying…";
+"library.status.waitingForCopy" = "Waiting for copy to finish…";
+"library.status.suggestion" = "Same game as another?";
+"library.status.driveNotConnected" = "Drive not connected";
+"library.status.missing" = "Missing";
+"library.status.fingerprintFailed" = "Hashing failed";
+"identity.suggestion" = "This might be the same game as %@ (a different version). Use one entry?";
+"identity.merge" = "Merge";
+"identity.keepSeparate" = "Keep separate";
+"identity.sameGameAs" = "Same game as…";
+"identity.differentGame" = "This is a different game";
+
+/* Drives */
+"drives.state.available" = "Connected";
+"drives.state.notConnected" = "Not connected";
+"drives.state.needsRelink" = "Needs to be found again";
+"drives.refusal.iCloud" = "iCloud Drive folders can't be game drives: their files may be moved off the device while a game runs.";
+"drives.refusal.network" = "Network folders can't be game drives: a dropped connection would stop a running game.";
+"drives.refusal.unknownVolume" = "Eikon couldn't tell where this folder is stored, so it can't be a game drive.";
+"drives.refusal.overlapsDrive" = "This folder is already a game drive, or is inside or around one.";
+"drives.refusal.unreadable" = "Eikon couldn't open this folder.";
+
+/* Import */
+"import.outcome.imported" = "Imported.";
+"import.outcome.noGameFound" = "No game was found in this folder.";
+"import.outcome.nameClash" = "This drive already has a game folder with that name.";
+"import.outcome.nameTaken" = "That name is taken or can't be used. Choose another.";
+"import.outcome.insufficientSpace" = "There isn't enough free space on this drive.";
+"import.outcome.driveUnavailable" = "This drive isn't connected.";
+"import.outcome.cancelled" = "Import cancelled.";
+"import.outcome.failed" = "The import failed. Nothing was changed on the drive.";

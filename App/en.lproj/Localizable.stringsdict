@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>library.count.games</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@games@</string>
+		<key>games</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d game</string>
+			<key>other</key>
+			<string>%d games</string>
+		</dict>
+	</dict>
+	<key>import.count.files</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@files@</string>
+		<key>files</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d file</string>
+			<key>other</key>
+			<string>%d files</string>
+		</dict>
+	</dict>
+	<key>import.count.bytes</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@bytes@</string>
+		<key>bytes</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d byte</string>
+			<key>other</key>
+			<string>%d bytes</string>
+		</dict>
+	</dict>
+	<key>drives.count.drives</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@drives@</string>
+		<key>drives</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d drive</string>
+			<key>other</key>
+			<string>%d drives</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

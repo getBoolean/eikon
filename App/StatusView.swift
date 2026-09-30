@@ -111,19 +111,17 @@ struct StatusContent: View {
     let onCopyReport: () -> Void
     let onShareReport: () -> Void
 
+    /// No navigation view of its own: RootView's column navigation hosts it.
     var body: some View {
-        NavigationView {
-            List {
-                appSection
-                installSection
-                jitSection
-                deviceSection
-                reportSection
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle(Text("status.title"))
+        List {
+            appSection
+            installSection
+            jitSection
+            deviceSection
+            reportSection
         }
-        .navigationViewStyle(.stack)
+        .listStyle(.insetGrouped)
+        .navigationTitle(Text("status.title"))
     }
 
     private var appSection: some View {
@@ -434,10 +432,14 @@ private let sampleApp = AppInfoRows(version: "0.1.0", build: "12", commit: "0123
 private let sampleDevice = DeviceRows(model: "iPad14,5", chip: "M2", osVersion: "17.0",
                                       osBuild: "21A329", memory: "4 GB")
 
-private func sampleContent(status: JITStatus, method: InstallMethod, pending: Bool) -> StatusContent {
-    StatusContent(app: sampleApp, installMethod: method, status: status,
-                  isRequestingTrollStoreJIT: pending, device: sampleDevice, copied: false, reportError: false,
-                  onRetryJIT: {}, onRetryProbe: {}, onCopyReport: {}, onShareReport: {})
+@MainActor
+private func sampleContent(status: JITStatus, method: InstallMethod, pending: Bool) -> some View {
+    NavigationView {
+        StatusContent(app: sampleApp, installMethod: method, status: status,
+                      isRequestingTrollStoreJIT: pending, device: sampleDevice, copied: false, reportError: false,
+                      onRetryJIT: {}, onRetryProbe: {}, onCopyReport: {}, onShareReport: {})
+    }
+    .navigationViewStyle(.stack)
 }
 
 struct StatusView_Previews: PreviewProvider {

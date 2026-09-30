@@ -117,7 +117,7 @@ public final class LibraryController: ObservableObject {
         let support = LibraryPaths.support
         try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
         return LibraryController(index: LibraryIndex(directory: support), settings: settings,
-                                 secret: try LibrarySecret.loadOrCreate(at: support.appendingPathComponent("library-secret")),
+                                 secret: try LibrarySecret.loadOrCreate(at: LibraryPaths.librarySecret),
                                  access: LiveFolderAccess.live, builtInRoot: LibraryPaths.documents, hooks: hooks)
     }
 

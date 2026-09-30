@@ -21,7 +21,7 @@ public final class LiveSessionRecorder: SessionRecorder {
     private static let log = Logger(subsystem: "com.getboolean.eikon", category: "session")
     public let sentinel: SessionSentinel
 
-    public init(directory: URL = LibraryPaths.support.appendingPathComponent("sessions", isDirectory: true)) {
+    public init(directory: URL = LibraryPaths.sessions) {
         sentinel = SessionSentinel(directory: directory)
     }
 

@@ -77,4 +77,14 @@ public enum LibraryPaths {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Eikon", isDirectory: true)
     }
+
+    /// `…/Eikon/sessions/`: the session sentinel, breadcrumbs, fault file and crash history.
+    public static var sessions: URL {
+        support.appendingPathComponent("sessions", isDirectory: true)
+    }
+
+    /// `…/Eikon/library-secret`: the key fingerprints are made with.
+    public static var librarySecret: URL {
+        support.appendingPathComponent("library-secret")
+    }
 }
