@@ -4,7 +4,7 @@ import Foundation
 /// file per replica under `<base>/settings/`. Other replicas' files are merged read-only
 /// and never written. Reads and writes are immediate in memory; persistence is debounced
 /// on a private serial queue, never on the caller's thread except through `flush()`.
-public final class SettingsStore: @unchecked Sendable {
+public final class SettingsStore: UnreadableFileReporting, @unchecked Sendable {
     /// Fingerprints kept per game and scheme.
     public static let fingerprintCap = Fingerprint.maxPerGame
 
@@ -20,6 +20,8 @@ public final class SettingsStore: @unchecked Sendable {
     private var ownReplica: ReplicaID
     private var fork: ReplicaID?
     private var dirty = false
+    /// This replica's own file couldn't be read: it is never written until `startOver`.
+    private var ownFileUnreadable = false
     /// Own-file entries this build can't decode, written back unchanged.
     private var undecodable: [String: JSONValue] = [:]
     private var pending: DispatchWorkItem?
@@ -47,6 +49,9 @@ public final class SettingsStore: @unchecked Sendable {
                 unknown = file.undecodable
                 forkedFrom = file.forkedFrom
                 seed = file.clock
+            } else {
+                // Perhaps a hand edit gone wrong: keep it for the user to fix or discard.
+                ownFileUnreadable = true
             }
         }
         map = loaded
@@ -222,6 +227,24 @@ public final class SettingsStore: @unchecked Sendable {
         queue.sync { persist() }
     }
 
+    // MARK: Unreadable own file
+
+    public var unreadableFiles: [URL] {
+        locked { ownFileUnreadable ? [Self.fileURL(ownReplica, in: directory)] : [] }
+    }
+
+    public func startOver() {
+        queue.sync {
+            let url: URL? = locked { ownFileUnreadable ? Self.fileURL(ownReplica, in: directory) : nil }
+            guard let url, (try? PersistedFile<ReplicaFile>(url: url).setAside()) != nil else { return }
+            locked {
+                ownFileUnreadable = false
+                dirty = true
+            }
+            persist()
+        }
+    }
+
     // MARK: Internals
 
     /// Caller holds the lock. Live fingerprint entries, newest first.
@@ -278,7 +301,7 @@ public final class SettingsStore: @unchecked Sendable {
         let snapshot: (ReplicaFile, URL)? = locked {
             pending?.cancel()
             pending = nil
-            guard dirty else { return nil }
+            guard dirty, !ownFileUnreadable else { return nil }
             dirty = false
             return (currentFile(), Self.fileURL(ownReplica, in: directory))
         }

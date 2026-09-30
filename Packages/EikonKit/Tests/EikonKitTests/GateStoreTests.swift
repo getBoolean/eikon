@@ -51,12 +51,21 @@ private func result(_ passed: Bool?) -> GateResult {
     #expect(store(directory).states()[future] == .passed)
 }
 
-@Test func corruptFileIsReplacedOnNextRecord() throws {
+@Test func unreadableFileIsKeptUntilStartingOver() throws {
     let directory = try temporaryDirectory()
-    try Data("not json".utf8).write(to: directory.appendingPathComponent("gates.json"))
-    let damaged = store(directory)
-    #expect(damaged.states().isEmpty)
+    let url = directory.appendingPathComponent("gates.json")
+    let damaged = Data("not json".utf8)
+    try damaged.write(to: url)
+    let gates = store(directory)
+    #expect(gates.unreadableFiles == [url])
 
-    damaged.record(.x18, result(true))
+    gates.record(.x18, result(true))
+    #expect(gates.states()[.x18] == .passed)
+    #expect(try Data(contentsOf: url) == damaged)
+
+    gates.startOver()
+    #expect(gates.unreadableFiles.isEmpty)
     #expect(store(directory).states()[.x18] == .passed)
+    let backups = try FileManager.default.contentsOfDirectory(atPath: directory.path).filter { $0.hasPrefix("gates.json.") }
+    #expect(backups.count == 1)
 }

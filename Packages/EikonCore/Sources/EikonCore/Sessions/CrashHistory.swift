@@ -27,25 +27,47 @@ private struct HistoryDocument: PersistedDocument {
 }
 
 /// `history.json`: the newest `limitPerGame` unclean sessions per game. Ids, codes and
-/// integers only. A file from a newer build is never rewritten.
-public final class CrashHistory: @unchecked Sendable {
+/// integers only. A file from a newer build is never rewritten; an unreadable one is left
+/// untouched and reported until the user starts over.
+public final class CrashHistory: UnreadableFileReporting, @unchecked Sendable {
     public static let limitPerGame = 5
 
     private let file: PersistedFile<HistoryDocument>
     private let lock = NSLock()
     private var document: HistoryDocument
     private var readOnly: Bool
+    private var unreadable: Bool
 
     public init(directory: URL) {
         file = PersistedFile(url: directory.appendingPathComponent("history.json"))
-        do {
-            let loaded = try file.load()
-            document = loaded?.document ?? HistoryDocument(entries: TolerantList())
-            readOnly = loaded?.isReadOnly ?? false
-        } catch {
-            // Present but unreadable: keep working in memory and never overwrite it.
-            document = HistoryDocument(entries: TolerantList())
+        document = HistoryDocument(entries: TolerantList())
+        readOnly = false
+        unreadable = false
+        switch file.loadOutcome() {
+        case .loaded(let loaded):
+            document = loaded.document
+            readOnly = loaded.isReadOnly
+        case .missing:
+            break
+        case .newerFormat:
             readOnly = true
+        case .unreadable:
+            // Keep working in memory and never overwrite it: the user may fix it.
+            readOnly = true
+            unreadable = true
+        }
+    }
+
+    public var unreadableFiles: [URL] {
+        lock.withLock { unreadable ? [file.url] : [] }
+    }
+
+    public func startOver() {
+        lock.withLock {
+            guard unreadable, (try? file.setAside()) != nil else { return }
+            unreadable = false
+            readOnly = false
+            try? file.save(document)
         }
     }
 

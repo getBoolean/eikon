@@ -47,13 +47,15 @@ public struct GateEntry: Sendable, Equatable {
 /// A pass counts only under the build it was measured on and reads as unmeasured after an
 /// app or OS update. A failure stays a failure, marked stale, until the gate is recorded
 /// again. Later splits (05: x18, 07: guestWindow) call `record`; 02 writes nothing.
-public final class GateStore: @unchecked Sendable {
+/// An unreadable file is left untouched and reported until the user starts over.
+public final class GateStore: UnreadableFileReporting, @unchecked Sendable {
     private let file: PersistedFile<GatesDocument>
     private let stamp: BuildStamp
     private let lock = NSLock()
     private let notifications = DispatchQueue(label: "eikon.gates.onChange")
     private var document: GatesDocument
     private var readOnly: Bool
+    private var unreadable: Bool
     private var changeHandler: (@Sendable () -> Void)?
 
     /// `directory` is `…/Application Support/Eikon` (a temp directory in tests); `current`
@@ -61,23 +63,41 @@ public final class GateStore: @unchecked Sendable {
     public init(directory: URL, current: BuildStamp) {
         file = PersistedFile(url: directory.appendingPathComponent("gates.json"))
         stamp = current
-        do {
-            let loaded = try file.load()
-            document = loaded?.document ?? GatesDocument(gates: TolerantList())
-            readOnly = loaded?.isReadOnly ?? false
-        } catch {
-            // Unreadable: start empty and let the next `record` replace it, so gates don't
-            // go unsaved for good. `PersistedFile.save` still refuses a newer-format file.
-            document = GatesDocument(gates: TolerantList())
+        document = GatesDocument(gates: TolerantList())
+        readOnly = false
+        unreadable = false
+        switch file.loadOutcome() {
+        case .loaded(let loaded):
+            document = loaded.document
+            readOnly = loaded.isReadOnly
+        case .missing:
+            break
+        case .newerFormat:
+            readOnly = true
+        case .unreadable:
+            // Records hold in memory for this run; the file waits for the user.
+            readOnly = true
+            unreadable = true
+        }
+    }
+
+    public var unreadableFiles: [URL] {
+        lock.withLock { unreadable ? [file.url] : [] }
+    }
+
+    public func startOver() {
+        lock.withLock {
+            guard unreadable, (try? file.setAside()) != nil else { return }
+            unreadable = false
             readOnly = false
+            try? file.save(document)
         }
     }
 
     /// Application Support/Eikon/gates.json, current app + OS build.
     @MainActor
     public static func live() -> GateStore {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return GateStore(directory: support.appendingPathComponent("Eikon"), current: .live())
+        GateStore(directory: LibraryPaths.support, current: .live())
     }
 
     /// Called after each `record`, off the caller's thread and one call at a time;

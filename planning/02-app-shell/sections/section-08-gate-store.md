@@ -218,7 +218,7 @@ The `gates` field already exists in schema version 1, so filling it is not a sch
 Files match the plan: `Packages/EikonKit/Sources/EikonKit/Gates/GateStore.swift` (new), `DeviceReport.swift` (`make` gains `gates: [String: GateResult] = [:]`), `GateStoreTests.swift` (new), `DeviceReportTests.swift` (+`reportIncludesGateStoreResults`). `App/StatusView.swift` and `tests/fixtures/device-report.json` are unchanged.
 
 Deviations from the plan, from code review:
-- **Unreadable file self-heals.** A `gates.json` that fails to decode starts empty and writable, unlike `CrashHistory`, so gates don't go unsaved for good. `PersistedFile.save` still refuses to overwrite a newer-format file.
+- **Unreadable file is kept and reported** (revised after section 10, at the owner's request). A `gates.json` that fails to decode, and isn't from a newer build, is never written. The user may have hand-edited it and can still fix it. Records hold in memory for the run. The store reports the file through `UnreadableFileReporting.unreadableFiles`, and only `startOver()` replaces it, keeping the old file as `gates.json.unreadable-<time>`.
 - **`BuildStamp.app` includes the commit**: `"version (build) commit"`, with the commit left out when it reads "unknown". Development builds often reuse a build number across binaries.
 - **Unreadable build identity.** If the version, build or OS build reads "unknown", `BuildStamp.live()` appends a per-process UUID, so a pass counts only in the run that measured it.
 - **Dates.** `measuredAt` is stored as ISO-8601 through a custom `Codable` on the private `StoredGate`, because `PersistedFile` uses default date encoding. `record` truncates `measuredAt` to whole seconds so memory matches disk.
@@ -226,4 +226,4 @@ Deviations from the plan, from code review:
 - **`onChange`** runs on a private serial queue, one call at a time.
 - **`entries()`** returns `[GateEntry]`, a public struct with `name`, `result` and `stamp` and a public init.
 
-Tests: `GateStoreTests` has 4 tests (the plan's 2, the optional unknown-name round trip, and a corrupt-file self-heal test). `DeviceReportTests` has 1 new test. `make test` is green.
+Tests: `GateStoreTests` has 4 tests (the plan's 2, the optional unknown-name round trip, and a test that an unreadable file stays untouched until `startOver`). `DeviceReportTests` has 1 new test. `make test` is green.

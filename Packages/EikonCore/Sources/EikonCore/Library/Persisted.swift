@@ -79,6 +79,18 @@ public protocol PersistedDocument: Codable, Sendable {
     static var currentFormat: Int { get }
 }
 
+/// A store that found one of its files unreadable. The user may have edited it by hand
+/// and made a mistake, so the store never replaces it on its own: it keeps working in
+/// memory, never writes that file, and reports it. The user either fixes the file and
+/// relaunches, or chooses `startOver()`.
+public protocol UnreadableFileReporting: AnyObject, Sendable {
+    /// Files left untouched because they couldn't be read; empty when all is well.
+    var unreadableFiles: [URL] { get }
+    /// Keeps each unreadable file as a backup beside it (`<name>.unreadable-<time>`), then
+    /// saves what is in memory in its place.
+    func startOver()
+}
+
 public enum PersistedError: Error, Sendable {
     /// The file on disk has a newer format than this build knows; it is never rewritten.
     case readOnly
@@ -113,6 +125,35 @@ public struct PersistedFile<Document: PersistedDocument>: Sendable {
         }
         let data = try JSONEncoder().encode(Stamped(document: document, format: Document.currentFormat))
         try Persisted.writeAtomically(data, to: url)
+    }
+
+    public enum LoadOutcome: Sendable {
+        case loaded(Loaded)
+        case missing
+        /// A newer build wrote it in a shape this one can't read: read-only, and not a problem.
+        case newerFormat
+        /// It exists, but this build can't read it and it isn't from a newer build.
+        case unreadable
+    }
+
+    /// Like `load`, but tells an unreadable file from one a newer build wrote.
+    public func loadOutcome() -> LoadOutcome {
+        do {
+            return try load().map(LoadOutcome.loaded) ?? .missing
+        } catch {
+            if let data = try? existingData(), let format = Persisted.format(of: data), format > Document.currentFormat {
+                return .newerFormat
+            }
+            return .unreadable
+        }
+    }
+
+    /// Moves the file aside as `<name>.unreadable-<time>`, kept as a backup. Nothing
+    /// happens when there is no file.
+    public func setAside() throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let stamp = Int(Date().timeIntervalSince1970)
+        try FileManager.default.moveItem(at: url, to: url.appendingPathExtension("unreadable-\(stamp)"))
     }
 
     private func existingData() throws -> Data? {

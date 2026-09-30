@@ -1,5 +1,7 @@
 # Section 12: Strings and root navigation
 
+> **Added after section 10 (owner's request):** stores never replace a file they can't read, since the user may have hand-edited it and can still fix it. `SettingsStore`, `CrashHistory`, `LibraryIndex` and `GateStore` conform to `UnreadableFileReporting` (in EikonCore's `Persisted.swift`). After wiring, `EikonApp` gathers `unreadableFiles` from all four. If any are listed, it shows one warning that names the files by their app-relative location, never a game title. The warning says Eikon won't change them, and offers two choices: fix them and relaunch, or **Start over**, which calls `startOver()` on the affected stores and keeps each old file as a backup. The strings go under `storage.unreadable.*`.
+
 ## What this section delivers
 
 This section covers plan §12.1, §12.7 and §14:

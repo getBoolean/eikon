@@ -246,6 +246,28 @@ private struct SplitMix64: RandomNumberGenerator {
     }
 }
 
+@Test func unreadableOwnFileIsKeptUntilStartingOver() throws {
+    try withTempDir { dir in
+        let game = UUID()
+        let first = try store(dir)
+        first.set(name, "saved", game: game)
+        first.flush()
+        let url = ownFile(first, in: dir)
+        let damaged = Data("{ not json".utf8)
+        try damaged.write(to: url)
+
+        let second = try store(dir)
+        #expect(second.unreadableFiles == [url])
+        second.set(name, "edited", game: game)
+        second.flush()
+        #expect(try Data(contentsOf: url) == damaged)
+
+        second.startOver()
+        #expect(second.unreadableFiles.isEmpty)
+        #expect(try store(dir).value(name, game: game) == "edited")
+    }
+}
+
 private func build(_ n: Int, engine: String? = nil) -> Fingerprint {
     Fingerprint(engineID: engine.map { Keyed(hex: $0) }, exact: Keyed(hex: String(format: "%064x", n)))
 }
