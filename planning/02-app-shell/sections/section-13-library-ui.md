@@ -1,5 +1,10 @@
 # Section 13: Library UI (App target)
 
+> **Added after section 12 (owner's request):** harden the unreadable-file warning in `App/RootView.swift` while replacing its placeholders.
+> - **The risk.** On iOS 15, an alert presented in the same frame that `NavigationLink(tag:selection:)` auto-activates `.library` can be dropped. iOS 15 and 16 can't be tested here: there's no device, and the oldest simulator runtime is iOS 17.
+> - **The fix.** Show the warning only after the root view has appeared and yielded once, for example a `@State var showUnreadable` set from `.task { await Task.yield(); ... }` from `services.pendingUnreadable`. Keep "Keep files" and "Start over" wired to `AppServices` as they are.
+> - **Checking.** On the iOS 17+ simulator, confirm that a corrupted `gates.json` still shows the warning at launch.
+
 ## Purpose
 
 This section builds the screens a user sees for their games and game drives:

@@ -13,5 +13,5 @@ No items needed the user's input. #6 applies the owner's standing rule (warn bef
 - **#9** `app.*` and `storage.*` namespaces documented in the strings header; unused `route.reason.runtimeDeclined` removed.
 
 ## Let go / manual
-- **#5c** Possible iOS 15 alert/NavigationLink race: checked on the newest simulator (alert shows); an iOS 15 device check belongs to section 16.
+- **#5c** Possible iOS 15 alert/NavigationLink race: no iOS 15 device or simulator is available (oldest runtime is iOS 17), so section 13 hardens the alert to show only after the root view appears.
 - **#8** Runtime checks open drives on the main actor per game: dormant until runtimes register (later splits).
