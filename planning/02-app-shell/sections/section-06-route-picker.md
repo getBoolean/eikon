@@ -86,7 +86,7 @@ Don't test the strings, the `RouteRules` table's literal contents, or the raw va
 Copy these signatures. Add public memberwise initializers where the compiler won't synthesize public ones.
 
 ```swift
-public enum RouteID: String, Codable, Sendable, CaseIterable {
+public enum RouteID: String, Sendable, CaseIterable {   // not Codable: persist the raw string only
     case nativeKirikiri = "native-kirikiri", nativeRenPy = "native-renpy"
     case wineFEX = "wine-fex", wineBox64 = "wine-box64", linuxFEX = "linux-fex"
 }

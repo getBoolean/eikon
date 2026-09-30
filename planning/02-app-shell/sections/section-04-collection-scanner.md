@@ -171,8 +171,7 @@ Put the scan driver (`CollectionScan.run`, or similar) in EikonCore rather than 
 - **GameMaker:** YYC vs VM
 - the "no game found" count
 - **Main-executable architecture counts:** overall, and separately for files named `Game.exe` (case-insensitive). The requirements table quotes `Game.exe` counts.
-- plugin base names with occurrence counts
-- Ren'Py native-extension base names with occurrence counts
+- plugin base names with occurrence counts, and Ren'Py native-extension base names with occurrence counts. A game can ship a module named after itself, so a name is printed only when at least two distinct games carry it (copies of one game, with the same engine and declared id, count once). The rest are folded into `plugin.other` / `renpy-native.other`.
 - the hit count of each exclusion rule (from section 02's counters), so false exclusions show up on real data
 - **Identity statistics:**
   - how many games have an engine-declared id, per engine
@@ -257,4 +256,4 @@ Findings by engine and count only.
 - `make test-core` passes, including the three `ScannerTests`.
 - `make test` passes, with `test_collection_scan.py` skipped.
 - `make scan-collection` prints `skipped: /Volumes/Games not mounted` and exits 0 when the share is absent. With the share mounted it prints a title-free aggregate report.
-- The scanner has been run against the mount. Detection has been fixed, or the requirements table corrected, so that the engine counts agree.
+- The scanner has been run against the mount and the result reconciled (see "Reconciliation result"). Because the share is grouped and the app stays flat, the engine counts can't agree with the table on this share; that is recorded, and no detection bug was found. The opt-in pytest becomes meaningful on a flat drive.

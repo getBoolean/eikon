@@ -53,7 +53,9 @@ int eikon_breadcrumb_write(int fd, uint64_t seq, int64_t time,
    (starting at 1, so an all-zero slot is empty) in statics. open creates or truncates the
    file, sizes it to EIKON_BREADCRUMB_SLOTS slots and resets seq; returns 0 or errno. append
    stamps CLOCK_REALTIME milliseconds and is async-signal-safe; a no-op when nothing is open.
-   close waits for appends already in flight, so a closed fd number is never written. */
+   close waits (bounded, about 100 ms) for appends already in flight, so a closed fd number is
+   never written; if a writer never returns (a non-returning signal handler, a killed thread)
+   the fd is leaked instead. Don't interrupt an append with a handler that doesn't return. */
 int eikon_breadcrumbs_open(const char *path);
 void eikon_breadcrumbs_append(uint16_t event, int64_t a, int64_t b);
 void eikon_breadcrumbs_close(void);
@@ -74,7 +76,8 @@ void eikon_breadcrumbs_close(void);
              16 uint64 address
    A trailing remainder shorter than a record is a torn write; readers ignore it.
 
-   close waits for records already in flight, so a closed fd number is never written. open
+   close waits (bounded, as for breadcrumbs) for records already in flight, so a closed fd
+   number is never written. open
    truncates, so read the previous session's file first. */
 
 #define EIKON_FAULT_MAGIC "EKFT"

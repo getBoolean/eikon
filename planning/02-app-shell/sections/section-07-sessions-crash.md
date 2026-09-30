@@ -163,7 +163,7 @@ void eikon_session_fault_close(void);
 
 If 01 used different names, keep 01's names and wire the Swift side to them. Any names added here should follow the `eikon_` prefix.
 
-> **As built.** Section 01 had a stateless `eikon_breadcrumb_write(fd, seq, time, event, a, b)` with a 48-byte slot (seq, time, a, b, event, FNV-1a 64 check word). This section added `eikon_breadcrumbs_open/append/close` on top of it, keeping the fd and an atomic seq in C statics. The layout is shared through offset macros (`EIKON_BREADCRUMB_OFFSET_*`, `EIKON_FAULT_OFFSET_*`, `EIKON_FAULT_RECORD_OFFSET_*`) rather than packed structs. Both writers count in-flight calls, and close swaps the fd to -1 and waits for them to drain, so a closed fd number is never written. The Swift reader also rejects a slot whose seq doesn't belong at its index.
+> **As built.** Section 01 had a stateless `eikon_breadcrumb_write(fd, seq, time, event, a, b)` with a 48-byte slot (seq, time, a, b, event, FNV-1a 64 check word). This section added `eikon_breadcrumbs_open/append/close` on top of it, keeping the fd and an atomic seq in C statics. The layout is shared through offset macros (`EIKON_BREADCRUMB_OFFSET_*`, `EIKON_FAULT_OFFSET_*`, `EIKON_FAULT_RECORD_OFFSET_*`) rather than packed structs. Both writers count in-flight calls, and close swaps the fd to -1 and waits for them to drain (bounded at about 100 ms), so a closed fd number is never written. If a writer never returns (a non-returning signal handler, a killed thread), the fd is leaked rather than closed, so close never hangs. The Swift reader also rejects a slot whose seq doesn't belong at its index.
 
 **Breadcrumb slots:**
 - The file holds a fixed number of slots (capacity **64**). A slot logically carries `(seq: UInt64, time: Int64, event: UInt16, a: Int64, b: Int64)`.
@@ -278,7 +278,7 @@ public final class CrashHistory: @unchecked Sendable {   // lock-guarded, file-b
     public static let limitPerGame: Int                  // 5
     public init(directory: URL)                          // history.json in the sessions dir
     @discardableResult public func add(_ consumed: ConsumedSession, now: Date) -> CrashEntry
-    public func entries(for game: GameID) -> [CrashEntry]    // newest first
+    public func entries(for game: GameID, links: [GameID: GameID] = [:]) -> [CrashEntry]    // newest first; follows merge links
     public func entry(id: UUID) -> CrashEntry?
 }
 ```
@@ -336,6 +336,7 @@ public enum CrashIssue {
   | `breadcrumbs` | the last `maxBreadcrumbs`, one line each: `seq time code a b` (codes and integers only; relative time from session start is fine) |
 
 - **Explicit percent-encoding.** Build `percentEncodedQuery` by hand. Encode every value (and key) with an allowed set of only the RFC 3986 unreserved characters (`A–Z a–z 0–9 - . _ ~`). Everything else is encoded, including `+`, `&`, `=`, space and newline. Don't rely on `URLQueryItem` encoding, which leaves `+` and some others literal, and GitHub decodes `+` as a space.
+- Breadcrumb time offsets are clamped, so an extreme stored time can't trap.
 - **`droppedBreadcrumbs`** counts only crumbs dropped to fit the length limit, not those beyond `maxBreadcrumbs`.
 - **Length limit.** If the URL would exceed `maxURLLength`, drop breadcrumbs **oldest first** and rebuild until it fits. Report how many were dropped in `droppedBreadcrumbs`. The caller (section 11) then copies the full `DeviceReport` JSON to the clipboard and tells the user to paste it. If the URL still doesn't fit with zero breadcrumbs, return it anyway; the other fields are bounded and short.
 - The repository URL comes from the app's `EKRepositoryURL` Info.plist key (`https://github.com/getBoolean/eikon`), read by the caller. The builder only appends to it.

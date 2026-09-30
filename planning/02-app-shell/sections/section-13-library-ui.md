@@ -162,7 +162,7 @@ If you factor out a pure presentation helper with real branching, such as launch
   The row shows the **verdict only**. Reasons appear only on the detail screen.
 - a **drive indicator** (a small icon or label) when the game's only locations are on non-built-in drives, for example USB
 - a **status line**, only when one applies, in this priority order:
-  1. *Identifying…* (fingerprinting pending or in progress)
+  1. *Identifying…* (fingerprinting pending or in progress; the full hash can take minutes, so show its progress. The game already has an id and can be launched and configured meanwhile)
   2. *Waiting for copy to finish* (not yet quiescent)
   3. *"Same game as …?"* (the location has a non-empty `suggestion`, minus `dismissedSuggestions`)
   4. *Drive not connected* (no reachable location because a drive is `notConnected` or `needsRelink`)
@@ -181,7 +181,7 @@ If you factor out a pure presentation helper with real branching, such as launch
    - **Keep separate** calls `dismissSuggestion`.
    - The card is non-blocking. The rest of the screen, including Launch, is fully usable without answering. Never present it modally.
 2. **Header.**
-   - **Editable display name.** A `TextField` that commits through `SettingsController` on submit, not on every keystroke. The default is the first location's folder name. It stays read-only until the location has a game id, which takes a second or two after the folder is quiescent.
+   - **Editable display name.** A `TextField` that commits through `SettingsController` on submit, not on every keystroke. The default is the first location's folder name. It stays read-only until the location has a game id, which the quick identity pass gives right after the folder is quiescent (section 09); the full hash doesn't block it.
    - **Engine details**, where present:
      - Unity scripting backend (Mono/IL2CPP) and best-effort version
      - Ren'Py version, marked exact or era
@@ -211,7 +211,7 @@ If you factor out a pure presentation helper with real branching, such as launch
    - **No chosen route** (unavailable): the button is disabled, and the reasons are visible in the route section.
    - **Forced route that can't run** (`isOverride` with a verdict of `unavailable`): tapping asks *"Launch anyway?"* and lists the override warnings. Confirming launches.
    - Before launching, ask `LibraryController` to re-evaluate drive states, then start the session through `GameSession`/`SessionPresenter` (section 10).
-5. **Crash history.** The last 5 entries from `CrashReportController`/`CrashHistory` for this game id, each with outcome, route and date, and a *Report on GitHub* action on each. Reports can be filed later from here as well as from the banner.
+5. **Crash history.** The last 5 entries from `CrashReportController`/`CrashHistory` for this game id, read with the store's `mergeLinks()` so crashes recorded under games merged into this one appear too, each with outcome, route and date, and a *Report on GitHub* action on each. Reports can be filed later from here as well as from the banner.
 6. **Identity** (a collapsed `DisclosureGroup`):
    - **Report id:** the first 8 characters of the game id. Make it selectable or copyable.
    - How many fingerprints (versions) are known.

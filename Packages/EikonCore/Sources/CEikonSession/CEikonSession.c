@@ -1,7 +1,6 @@
 #include "CEikonSession.h"
 
 #include <errno.h>
-#include <sched.h>
 #include <fcntl.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -96,13 +95,23 @@ int eikon_breadcrumb_write(int fd, uint64_t seq, int64_t time,
 static _Atomic int breadcrumb_fd = -1;
 static _Atomic uint64_t breadcrumb_seq = 0;
 static _Atomic int32_t breadcrumb_in_flight = 0;
+static _Atomic int32_t breadcrumb_stuck = 0;
 
-/* Swaps the fd out, then waits until no writer that loaded the old fd is still using it,
-   so its number can't be reused by another open while a write is pending. */
-static void retire_fd(_Atomic int *slot, _Atomic int32_t *in_flight) {
+/* Swaps the fd out, then waits (about 100 ms at most) until no writer that loaded the old fd
+   is still using it, so its number can't be reused by another open while a write is pending.
+   A writer that never returns (killed or longjmp'd mid-write) would hold the count forever:
+   on timeout the fd is leaked rather than closed, and later waits skip the stuck count. */
+static void retire_fd(_Atomic int *slot, _Atomic int32_t *in_flight, _Atomic int32_t *stuck) {
     int fd = atomic_exchange(slot, -1);
     if (fd < 0) return;
-    while (atomic_load(in_flight) > 0) sched_yield();
+    struct timespec pause = {0, 1000000};
+    for (int waited = 0; atomic_load(in_flight) > atomic_load(stuck); waited++) {
+        if (waited >= 100) {
+            atomic_store(stuck, atomic_load(in_flight));
+            return;
+        }
+        nanosleep(&pause, NULL);
+    }
     close(fd);
 }
 
@@ -138,13 +147,14 @@ void eikon_breadcrumbs_append(uint16_t event, int64_t a, int64_t b) {
 }
 
 void eikon_breadcrumbs_close(void) {
-    retire_fd(&breadcrumb_fd, &breadcrumb_in_flight);
+    retire_fd(&breadcrumb_fd, &breadcrumb_in_flight, &breadcrumb_stuck);
 }
 
 /* ---- Fault hook ---- */
 
 static _Atomic int fault_fd = -1;
 static _Atomic int32_t fault_in_flight = 0;
+static _Atomic int32_t fault_stuck = 0;
 
 static int write_all(int fd, const uint8_t *bytes, size_t count) {
     while (count > 0) {
@@ -203,5 +213,5 @@ void eikon_session_fault_record(int signal, uintptr_t pc, uintptr_t address) {
 }
 
 void eikon_session_fault_close(void) {
-    retire_fd(&fault_fd, &fault_in_flight);
+    retire_fd(&fault_fd, &fault_in_flight, &fault_stuck);
 }

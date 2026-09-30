@@ -191,7 +191,33 @@ private func fingerprintHoldsNoPlainText(source: DeclaredSource) throws {
     }
 }
 
+@Test func contentStampFollowsDeepChangesButNotSaves() throws {
+    try withTempDir { dir in
+        let root = try Fixtures.renpy(.scriptVersion, in: dir)
+        let detection = try #require(try GameDetector.detect(folder: root))
+        let before = try FingerprintBuilder.contentStamp(detection: detection, folder: root)
+
+        try Fixtures.write("slot", to: "game/saves/1-1-LT1.save", in: root)
+        #expect(try FingerprintBuilder.contentStamp(detection: detection, folder: root) == before)
+
+        try Fixtures.write("patched", to: "game/deep/nested/extra.rpy", in: root)
+        #expect(try FingerprintBuilder.contentStamp(detection: detection, folder: root) != before)
+    }
+}
+
 // MARK: Matcher
+
+@Test func quickMatchFindsAGameByEngineIDBeforeTheFullHash() {
+    let known = GameID.random(), minter = Minter()
+    let game = KnownGame(id: known, fingerprints: [fp("v1", engine: "e")], hasLiveLocationHere: false)
+    let declared = fp("unused", engine: "e").engineID
+    #expect(IdentityMatcher.quickMatch(engineID: declared, at: here, knownLocations: [:], games: [game],
+                                       mint: minter.mint) == .attach(known, .engineID))
+    #expect(IdentityMatcher.quickMatch(engineID: nil, at: here, knownLocations: [:], games: [game],
+                                       mint: minter.mint) == .newGame(minter.next, suggestions: []))
+    #expect(IdentityMatcher.quickMatch(engineID: nil, at: here, knownLocations: [here: known], games: [game],
+                                       mint: minter.mint) == .keep(known))
+}
 
 private let drive = UUID()
 private let here = LocationKey(driveID: drive, folderName: "Folder")

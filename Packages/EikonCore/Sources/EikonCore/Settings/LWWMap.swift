@@ -67,6 +67,8 @@ public struct LWWMap: Codable, Sendable, Equatable {
 struct SettingPath: Equatable {
     static let deletedAtName = "deletedAt"
     static let fingerprintPrefix = "fp/"
+    /// Global merge links: `merged/<uuid>`.
+    static let mergedPrefix = "merged/"
     private static let gamePrefix = "game/"
 
     let game: UUID

@@ -33,7 +33,7 @@ This section builds the pure, platform-neutral identity logic in the `EikonCore`
 
 Things outside this section:
 
-- Persisting fingerprints in settings (`game/<id>/fp/<scheme>/<n>`) and writing the `merged/<A>` global key happen in section 05 (settings store) and section 09 (library). This section only provides the pure in-memory logic those sections apply.
+- Persisting fingerprints in settings (`game/<id>/fp/<scheme>/<exact>`) and writing the `merged/<A>` global key happen in section 05 (settings store) and section 09 (library). This section only provides the pure in-memory logic those sections apply.
 - The collection scanner (section 04) uses `FingerprintBuilder` with a fixed scanner secret and reports identity statistics.
 
 ### Dependencies
@@ -249,6 +249,9 @@ Details:
   - Any unreadable file throws `IdentityError.fileUnreadable`; nothing is silently dropped.
 - **Cost.** A fingerprint reads every byte of the game. Callers (import and library scans, section 09) run it in the background with `progress` (non-decreasing, 0…1) and `isCancelled` (checked between 1 MiB chunks, throws `CancellationError`). Game files are opened read-only with `O_NOFOLLOW`; the declared-id reads still go through `FolderReader`.
 - **Privacy.** Plain names and engine-id text never appear in the resulting `Fingerprint` or its JSON.
+- **Also public (added in the split re-review):**
+  - `FingerprintBuilder.engineID(detection:folder:secret:)`: the keyed declared id alone, a few small reads, for the quick identity pass.
+  - `FingerprintBuilder.contentStamp(detection:folder:)`: a cheap digest of every entry's path plus each file's size and mtime, with the same exclusions (directory mtimes left out, so a save landing in a folder doesn't count). Section 09 uses it for finished-copy detection, change detection, and to discard a hash that went stale while it ran. Local only.
 
 ### 6. `IdentityMatcher` (pure)
 
@@ -293,6 +296,8 @@ public static func match(fingerprint: Fingerprint, at location: LocationKey,
    - If more than one candidate matched under rule 2 or 3, attach to none: create a new game with a suggestion listing all candidates (sorted by id).
    - With no candidates, the suggestion list is empty.
    - **File names never match and never suggest.** The planned name-similarity rule was dropped at the owner's decision: engine-standard layouts make unrelated games look alike, and files alone may identify a game only when they are 100% identical (rule 2).
+
+**Quick pass.** `IdentityMatcher.quickMatch(engineID:scheme:at:knownLocations:games:mint:)` applies rules 1 and 3 only, before the full hash exists, so a location gets a game id at once (a new one is provisional). Section 09 runs `match` when the full hash finishes, and merges a provisional game with no user data into an exact-matched game silently, or else posts a suggestion.
 
 Evaluate each rule fully before falling to the next. For example, several exact matches go straight to rule 4's multi-candidate case, rather than falling through to rule 3.
 

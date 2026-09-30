@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 /// Per-game and global settings: a last-writer-wins map ordered by a hybrid clock, one
@@ -6,7 +5,7 @@ import Foundation
 /// and never written. Reads and writes are immediate in memory; persistence is debounced
 /// on a private serial queue, never on the caller's thread except through `flush()`.
 public final class SettingsStore: @unchecked Sendable {
-    /// Fingerprint slots kept per game and scheme.
+    /// Fingerprints kept per game and scheme.
     public static let fingerprintCap = Fingerprint.maxPerGame
 
     private let directory: URL
@@ -75,6 +74,20 @@ public final class SettingsStore: @unchecked Sendable {
     /// The replica this store forked from because its file came from a newer build.
     public var forkedFrom: ReplicaID? { locked { fork } }
 
+    /// Every live `merged/<A>` = B link, for `IdentityMatcher.resolve`.
+    public func mergeLinks() -> [GameID: GameID] {
+        locked {
+            var links: [GameID: GameID] = [:]
+            for key in map.entries.keys where key.hasPrefix(SettingPath.mergedPrefix) {
+                guard let from = UUID(uuidString: String(key.dropFirst(SettingPath.mergedPrefix.count))),
+                      let to = map.effectiveValue(key)?.decoded(as: String.self).flatMap(UUID.init(uuidString:))
+                else { continue }
+                links[GameID(uuid: from)] = GameID(uuid: to)
+            }
+            return links
+        }
+    }
+
     /// The merged map, for diagnostics and sync.
     public func snapshot() -> LWWMap { locked { map } }
 
@@ -140,28 +153,33 @@ public final class SettingsStore: @unchecked Sendable {
 
     // MARK: Fingerprints
 
-    /// Live fingerprints for `scheme`, most recent first, at most `fingerprintCap`;
-    /// undecodable ones skipped.
-    public func fingerprints<F: Codable & Sendable>(game: UUID, scheme: Int, as type: F.Type) -> [F] {
-        locked { live(game: game, scheme: scheme).prefix(Self.fingerprintCap).compactMap { $0.entry.value.decoded(as: F.self) } }
+    /// Live fingerprints for `scheme`, **oldest first** (the order `KnownGame.fingerprints`
+    /// uses), at most the newest `fingerprintCap`; undecodable entries skipped.
+    public func fingerprints(game: UUID, scheme: Int = Fingerprint.currentScheme) -> [Fingerprint] {
+        locked {
+            Array(live(game: game, scheme: scheme).prefix(Self.fingerprintCap).reversed())
+                .compactMap { $0.entry.value.decoded(as: Fingerprint.self) }
+        }
     }
 
-    /// Adds or refreshes a fingerprint (its key is a digest of the value), then tombstones
-    /// all but the newest `fingerprintCap`.
-    public func addFingerprint<F: Codable & Sendable & Equatable>(_ fingerprint: F, scheme: Int, game: UUID) {
-        guard let value = try? JSONValue(encoding: fingerprint), let key = Self.fingerprintKey(value, scheme, game) else { return }
+    /// Adds or refreshes a fingerprint, then tombstones all but the newest `fingerprintCap`.
+    /// Fingerprints are the same when their `exact` values are, as in `IdentityMatcher.adding`,
+    /// so a changed engine id for the same bytes replaces the entry instead of adding one.
+    public func addFingerprint(_ fingerprint: Fingerprint, game: UUID) {
+        guard let value = try? JSONValue(encoding: fingerprint) else { return }
+        let key = Self.fingerprintKey(fingerprint, game)
         locked {
             map.set(key, value, at: clock.tick(now: now()))
-            for extra in live(game: game, scheme: scheme).dropFirst(Self.fingerprintCap) {
+            for extra in live(game: game, scheme: fingerprint.scheme).dropFirst(Self.fingerprintCap) {
                 map.reset(extra.key, at: clock.tick(now: now()))
             }
             markDirty()
         }
     }
 
-    /// Tombstones this fingerprint.
-    public func removeFingerprint<F: Codable & Sendable & Equatable>(_ fingerprint: F, scheme: Int, game: UUID) {
-        guard let value = try? JSONValue(encoding: fingerprint), let key = Self.fingerprintKey(value, scheme, game) else { return }
+    /// Tombstones the fingerprint with this `exact` value.
+    public func removeFingerprint(_ fingerprint: Fingerprint, game: UUID) {
+        let key = Self.fingerprintKey(fingerprint, game)
         locked {
             guard map.effectiveEntry(key) != nil else { return }
             map.reset(key, at: clock.tick(now: now()))
@@ -203,12 +221,10 @@ public final class SettingsStore: @unchecked Sendable {
             .sorted { $0.entry.time > $1.entry.time }
     }
 
-    private static func fingerprintKey(_ value: JSONValue, _ scheme: Int, _ game: UUID) -> String? {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .sortedKeys
-        guard let data = try? encoder.encode(value) else { return nil }
-        let digest = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
-        return SettingKey.fingerprint(scheme: scheme, digest: digest).storageKey(game: game)
+    /// Keyed by the exact value (already a keyed hash), so equal builds share a key.
+    private static func fingerprintKey(_ fingerprint: Fingerprint, _ game: UUID) -> String {
+        SettingKey.fingerprint(scheme: fingerprint.scheme, digest: fingerprint.exact.hex)
+            .storageKey(game: game)!
     }
 
     private func read<V: Decodable>(_ key: String?) -> V? {

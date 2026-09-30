@@ -32,8 +32,8 @@ No game runs in this split. The runtimes arrive in later splits: 03 (Kirikiri), 
 |---|---|---|
 | Where new logic lives | A **new platform-neutral SwiftPM package, `Packages/EikonCore`** (iOS 15 + macOS 13, no UIKit). It holds detection, identity, hashing, route rules, the settings CRDT, the session sentinel, breadcrumbs, issue-URL building and the scanner. `EikonKit` depends on it for the pieces that face UIKit. | EikonKit imports UIKit and can't build on macOS. The scanner must run the *same* detection code on the Mac, and core tests run fast with `swift test`. |
 | Library model | **Game drives.** The built-in drive is `Documents/`, which Files shows as "On My iPad/Eikon". Users can add folders on USB drives or other local storage. Each game is an immediate subfolder of a drive, or sits inside a single wrapper folder there. Import **copies** the game into the chosen drive. | The owner's choice. Flat folders make names unique per drive, which makes folder-name identity workable. Games on a USB drive run from the drive. |
-| Identity | **Game id** = a random UUID, minted once. A location is matched to its game by (1) the same drive and folder (so an in-place patch keeps the id), (2) an exact content fingerprint, (3) the engine's own declared id, or (4) file-name similarity. Fingerprints are stored and synced only as HMACs under a library secret. | The owner's choice, after comparing launchers (research Part D). Names are never keys. Renames, moves, patches and a second device match silently, and prompts happen only on real ambiguity and never block. A mistake yields a duplicate entry, never shared saves. |
-| Hashing | Identity needs no full-file hash. A fingerprint reads a listing, a few small files, and at most 2 MiB of the key file. Full SHA-256 remains only for diagnostics (scanner `--hash`, "Verify files"). | Fast, even on USB drives. No long "identifying" phase. |
+| Identity | **Game id** = a random UUID, minted once. A location is matched to its game by (1) the same drive and folder (so an in-place patch keeps the id), (2) an exact content fingerprint, or (3) the engine's own declared id. File names alone never match or suggest; files identify a game only when 100% identical (saves excluded). Fingerprints are stored and synced only as HMACs under a library secret. | The owner's choice, after comparing launchers (research Part D). Names are never keys. Renames, moves, patches and a second device match silently, and prompts happen only on real ambiguity and never block. A mistake yields a duplicate entry, never shared saves. |
+| Hashing | The exact signal is a full content hash of the game tree, saves and OS metadata excluded (owner decision in section 03's review). A game gets its id at once from a quick pass (known location, engine id) and the full hash confirms it in the background; a cheap recursive stat stamp detects finished copies and changes. Full SHA-256 also serves diagnostics (scanner `--hash`, "Verify files"). | Files alone are trusted only when identical. The quick pass keeps Launch and settings from waiting minutes on large games. |
 | Crash recording | Session sentinel plus breadcrumbs. 02 installs **no** signal handler. A C fault hook is left for later runtimes. | FEX and Wine use SIGSEGV/SIGBUS for normal operation. Jetsam can't be caught anyway. |
 | Crash reporting | A prefilled GitHub issue from an issue form (`crash.yml`), which the user reviews in Safari. Games appear in it only as a **report id**: the first 8 characters of the random game id. No file hashes. | Reports go to the owner with no Eikon-run service. A random id reveals nothing, whereas a file hash could be matched against hash databases. |
 | Settings | A hand-rolled per-field LWW map with a hybrid logical clock. There is one file per device (replica). Unknown fields are preserved, reset is a tombstone, and a per-game `deletedAt` marker shadows older keys. | 12 merges per-device files over WebDAV with no locking and no migration. |
@@ -85,7 +85,7 @@ Packages/EikonCore/
         GameMakerDetector.swift
         BGIDetector.swift
       Identity/
-        GameIdentity.swift          # GameID, Fingerprint, Keyed, Keyed8
+        GameIdentity.swift          # GameID, Fingerprint, Keyed, LibrarySecret
         NameNormalizer.swift        # NFC + trim + case-fold (listings, names)
         KeyFile.swift               # key file per engine
         EngineDeclaredID.swift      # Ren'Py save_directory, Unity app.info, GM name, exe version info + generic blocklist
@@ -374,11 +374,9 @@ public struct GameID: Hashable, Codable, Sendable { public let uuid: UUID }   //
 public struct Fingerprint: Codable, Sendable, Equatable {
     public var scheme: Int                   // bump to change how fingerprints are computed
     public var engineID: Keyed?              // engine-declared identity, keyed (see 5.3)
-    public var exact: Keyed                  // listing with sizes + key-file partial hash, keyed
-    public var names: [Keyed8]               // keyed 8-byte digests of top-level entry names (≤256)
+    public var exact: Keyed                  // full content hash of the tree (saves excluded), keyed
 }
 public struct Keyed:  Hashable, Codable, Sendable { public let hex: String }   // HMAC-SHA256, 64 hex
-public struct Keyed8: Hashable, Codable, Sendable { public let hex: String }   // truncated to 16 hex
 ```
 
 A game id is a random UUID, minted when a folder matches no existing game. It never encodes anything about the game, so its first 8 characters can serve as the **report id** in crash issues (§10.5) with nothing to reverse.
@@ -393,10 +391,10 @@ All signals are computed from the **game root**, never from the game folder's ow
   - *GameMaker:* the GEN8 `Name` and `DisplayName` strings.
   - *Windows executables (any engine, including Kirikiri, BGI and unknown):* `CompanyName` + `ProductName` from the main exe's version resource, **unless** they are an engine's generic values (such as `TVP(KIRIKIRI)`, `Unity`, `DefaultCompany`, `My project`). The generic values are one static blocklist table, and scanner data extends it.
   - The value is prefixed with the engine (`"renpy:" + value`).
-- **Exact signal.** The sorted top-level listing of the game root (normalized names and file sizes, directories by name only), plus the key file's size and the SHA-256 of its first and last 1 MiB. Any real change to the game's files changes it.
-- **Name set.** Normalized names of top-level entries in the game root, excluding generic names such as `data`, `save`, `savedata`, `plugin`, `lib`, `game`, `renpy`, `*_Data` and common DLLs. It is used for similarity (Jaccard) when the engine id is missing.
+- **Exact signal.** Every path in the game tree (normalized), with every file's size and full SHA-256, excluding save folders and OS metadata; symlinks by name only. Two folders share it only when identical.
+- **Content stamp.** A cheap digest of every path with each file's size and mtime (same exclusions), local only: for finished-copy detection, change detection, and catching a hash that went stale while it ran.
 
-**The key file** is the game-specific file used in the exact signal:
+**The key file** is the game's main data file, recorded in the detection result for output and the scanner (the fingerprint no longer samples it):
 
 | Engine | Key file (first that exists) |
 |---|---|
@@ -406,12 +404,12 @@ All signals are computed from the **game root**, never from the game folder's ow
 | Ren'Py | the largest `game/*.rpa`, then the largest `game/*.rpyc` |
 | BGI / unknown | the main exe |
 
-**Cost.** Computing a fingerprint reads a directory listing, a few small files and at most 2 MiB of the key file. That is fast even on a USB drive, so there is no full-file hashing and no long "identifying" phase.
+**Cost.** The full hash reads every byte, which can take minutes on large games or USB drives. It runs on a background worker with progress and cancellation, and the quick identity pass (§5.4) means nothing waits on it.
 
 ### 5.3 Keyed values (privacy)
 
 Plain signals contain titles, since engine ids and file names often are titles. They are never stored or synced in plain form.
-- Every signal is stored as HMAC-SHA256(library secret, signal). `names` entries are truncated to 8 bytes.
+- Every signal is stored as HMAC-SHA256(library secret, signal).
 - The **library secret** is 32 random bytes, created once in `Application Support/Eikon/library-secret`.
 - A second device must use the **same** secret, so its fingerprints compare equal. Carrying the secret between the user's devices is split 12's job, through its pairing step and never in plain text on the server. Until then each device has its own secret, and cross-device matching starts working when 12 lands.
 - The scanner uses a fixed, documented scanner secret. Its output is comparable across runs and is never the app's secret.
@@ -423,7 +421,7 @@ Inputs:
 - this device's locations and their game ids
 - every known game's stored fingerprints, from settings
 
-Each game's fingerprints are stored under `game/<id>/fp/<scheme>` (§7.2). Known games include those synced from other devices. A game can hold several fingerprints: one per distinct build seen, capped at the most recent 8.
+Each game's fingerprints are stored under `game/<id>/fp/<scheme>/<exact>` (§7.2). Known games include those synced from other devices. A game can hold several fingerprints: one per distinct build seen, capped at the most recent 8.
 
 Rules, applied in order:
 
@@ -432,8 +430,9 @@ Rules, applied in order:
 3. **Engine-id match.** The engine id equals one of exactly one game's fingerprints:
    - If that game has **no live location on this device**, attach silently and add the fingerprint. This covers a patched copy that was moved, renamed or re-imported, and a newer version on another device.
    - If that game **does** have a live location here, this is a different version sitting beside the known one. Create a **new** game and post a non-blocking suggestion on it: *"Same game as <display name>, different version?"* Accepting merges (§5.5). Ignoring keeps them separate.
-4. **Name similarity.** No engine id on either side, name-set Jaccard ≥ 0.8, and exactly one candidate game with no live location here: attach silently and add the fingerprint. This covers a patched and renamed or moved game from an engine with no declared id.
-5. **Otherwise** mint a new game id. If more than one candidate matched under rule 2, 3 or 4, attach to none: create a new game and post the same non-blocking suggestion, listing the candidates.
+4. **Otherwise** mint a new game id. If more than one candidate matched under rule 2 or 3, attach to none: create a new game and post the same non-blocking suggestion, listing the candidates. File names never match or suggest.
+
+**Two passes.** `quickMatch` applies rules 1 and 3 as soon as a folder is quiescent (the engine id needs only a few small reads), so the location gets an id at once; a new id is provisional. When the full hash finishes, `match` runs. If it exact-matches a different game, a provisional game with no user data is merged into it silently; otherwise a suggestion is posted.
 
 **Deleted games** (with `deletedAt` set, §6.9) are never candidates. A game re-imported after its data was deleted starts fresh.
 
@@ -639,7 +638,7 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
 
 - **Per-game keys** are stored as `game/<gameIDhex>/<name>`. Enum values are stored as their string raw values.
 - **Keys defined in 02:**
-  - per-game: `displayName`, `route.override`, `deletedAt`, and `fp/<scheme>/<n>`. The last holds the game's fingerprints (keyed values only; up to 8, most recent kept; each slot is a separate key, so two devices adding fingerprints don't overwrite each other).
+  - per-game: `displayName`, `route.override`, `deletedAt`, and `fp/<scheme>/<exact>`. The last holds the game's fingerprints (keyed values only; up to 8, most recent kept; one key per build's exact value, so two devices adding different builds never overwrite each other and the same build shares a key).
   - global: `merged/<gameUUID>`, which points a merged game at the one it merged into (§5.5)
 - **Reserved namespaces**, documented in `SettingKey.swift` together with the split that owns each: `fex.*` (05), `controls.*` (04), `codePage` (09).
 - **Display name:** the default is the folder name of the game's first location, which is not stored as a setting until the user edits it. The display name never enters logs, reports or issues.
@@ -1153,7 +1152,8 @@ Run with `swift test` on the Mac, and on the simulator through the scheme.
     - exact match attaches (rename, move, second drive)
     - an engine-id match attaches when the game has no live location here
     - an engine-id match suggests (never merges) when the game is live elsewhere
-    - name similarity attaches when there is no engine id
+    - with no engine id and no exact match, file names never match (a new game)
+    - the quick pass finds a game by known location or engine id before the full hash
     - multiple candidates create a new game plus a suggestion
     - no match creates a new game
   - Merge links resolve, and cycles break deterministically.

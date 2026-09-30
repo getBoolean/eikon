@@ -78,7 +78,8 @@ public enum CrashIssue {
             fields.append(("fault", "signal \(fault.signal) pc 0x\(String(fault.pc, radix: 16))"))
         }
         fields.append(("breadcrumbs", crumbs.map { crumb in
-            let millis = Int64((crumb.time.timeIntervalSince(start) * 1000).rounded())
+            let offset = (crumb.time.timeIntervalSince(start) * 1000).rounded()
+            let millis = offset.isFinite ? Int64(max(min(offset, 1e15), -1e15)) : 0
             return "\(crumb.seq) +\(millis)ms \(crumb.code) \(crumb.a) \(crumb.b)"
         }.joined(separator: "\n")))
 

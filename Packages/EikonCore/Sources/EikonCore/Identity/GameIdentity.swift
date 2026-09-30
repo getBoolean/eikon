@@ -57,7 +57,7 @@ public struct Fingerprint: Codable, Sendable, Equatable {
     public var scheme: Int
     /// The engine-declared identity, keyed.
     public var engineID: Keyed?
-    /// The root listing with sizes plus the key file's partial hash, keyed.
+    /// A full content hash of the game tree (saves and OS metadata excluded), keyed.
     public var exact: Keyed
 
     public init(scheme: Int = Fingerprint.currentScheme, engineID: Keyed?, exact: Keyed) {

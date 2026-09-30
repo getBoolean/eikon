@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 /// Turns a detected game's signals into a keyed `Fingerprint`, read-only. Every signal
@@ -20,18 +21,47 @@ public enum FingerprintBuilder {
     public static func build(detection: DetectionResult, folder: URL, secret: LibrarySecret,
                              progress: (Double) -> Void = { _ in },
                              isCancelled: () -> Bool = { false }) throws -> Fingerprint {
-        let root = detection.gameRoot.isEmpty ? folder : folder.appendingPathComponent(detection.gameRoot, isDirectory: true)
-        let listing = try FolderListing(url: root)
-
-        let engineID: Keyed?
-        let declared = EngineDeclaredID.read(detection: detection, listing: listing, reader: FolderReader(root: root))
-        if case .found(let value) = declared {
-            engineID = keyed(secret, Data("\(detection.engine.rawValue):\(value)".utf8))
-        } else {
-            engineID = nil
-        }
+        let listing = try FolderListing(url: root(detection, folder))
         let exact = try exactBytes(listing, progress: progress, isCancelled: isCancelled)
-        return Fingerprint(engineID: engineID, exact: keyed(secret, exact))
+        return Fingerprint(engineID: engineID(detection, listing, secret), exact: keyed(secret, exact))
+    }
+
+    /// The keyed engine-declared id alone: a few small reads, no hashing. Lets the library
+    /// find or mint a game id at once (`IdentityMatcher.quickMatch`) while `build` runs.
+    public static func engineID(detection: DetectionResult, folder: URL, secret: LibrarySecret) throws -> Keyed? {
+        engineID(detection, try FolderListing(url: root(detection, folder)), secret)
+    }
+
+    /// A cheap digest of every entry's relative path, plus each file's size and modification time, under the
+    /// game root, with the same exclusions as the exact signal. It changes whenever the
+    /// exact signal could: use it to tell that a copy has finished (the same stamp on two
+    /// scans apart), that a known folder changed and needs a new fingerprint, and that a
+    /// fingerprint went stale while it was being built. Local only; never stored or synced.
+    public static func contentStamp(detection: DetectionResult, folder: URL) throws -> String {
+        var tree: [TreeEntry] = []
+        try walk(try FolderListing(url: root(detection, folder)), prefix: "", into: &tree)
+        var bytes = Data()
+        for item in tree {
+            appendField(Data(item.path.utf8), to: &bytes)
+            // A folder's own mtime moves when a save lands inside it; its contents speak for it.
+            guard item.entry.kind == .file else { continue }
+            var info = stat()
+            guard lstat(item.url.path, &info) == 0 else { throw IdentityError.fileUnreadable }
+            appendInteger(UInt64(bitPattern: Int64(info.st_size)), to: &bytes)
+            appendInteger(UInt64(bitPattern: Int64(info.st_mtimespec.tv_sec)), to: &bytes)
+            appendInteger(UInt64(bitPattern: Int64(info.st_mtimespec.tv_nsec)), to: &bytes)
+        }
+        return Data(SHA256.hash(data: bytes)).lowercaseHex
+    }
+
+    private static func root(_ detection: DetectionResult, _ folder: URL) -> URL {
+        detection.gameRoot.isEmpty ? folder : folder.appendingPathComponent(detection.gameRoot, isDirectory: true)
+    }
+
+    private static func engineID(_ detection: DetectionResult, _ listing: FolderListing, _ secret: LibrarySecret) -> Keyed? {
+        let declared = EngineDeclaredID.read(detection: detection, listing: listing, reader: FolderReader(root: listing.url))
+        guard case .found(let value) = declared else { return nil }
+        return keyed(secret, Data("\(detection.engine.rawValue):\(value)".utf8))
     }
 
     private struct TreeEntry {

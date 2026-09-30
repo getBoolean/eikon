@@ -186,8 +186,8 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
   - per-game `routeOverride: SettingKey<String>`, named `route.override`. The value is a route's raw value; absent means Automatic.
   - per-game `deletedAt: SettingKey<Int64>`
     - The value is wall-clock millis, for display only. Shadowing uses the entry's HLC timestamp.
-  - per-game fingerprints `fp/<scheme>/<digest>` (`SettingKey.fingerprint(scheme:digest:)`):
-    - `digest` is 16 hex characters of SHA-256 over the value's sorted-keys JSON, so equal fingerprints share a key and different ones never collide across devices.
+  - per-game fingerprints `fp/<scheme>/<exact>` (`SettingKey.fingerprint(scheme:digest:)`):
+    - The digest is the fingerprint's full `exact` hex (already a keyed hash), so the same build shares a key and different builds never collide across devices.
     - `SettingsStore.fingerprintCap` (= `Fingerprint.maxPerGame`) live fingerprints are kept per game and scheme.
   - global `merged/<gameUUID>`: a builder taking the merged-away game's UUID. Its value is the target game's UUID string. The identity sections resolve these links.
 - **Reserved namespaces:** document these in a doc comment in `SettingKey.swift`, each with the split that owns it:
@@ -252,13 +252,14 @@ public struct SettingKey<Value: Codable & Sendable>: Sendable {
   - It writes `game/<id>/deletedAt` with a fresh tick.
   - The write shadows every older key for that game on every replica once merged.
   - Running cleanup hooks is the library section's job, not the store's.
-- `fingerprints<F: Codable & Sendable>(game: UUID, scheme: Int, as: F.Type) -> [F]`:
-  - It returns the live fingerprints, **most recent first** by entry timestamp, at most `fingerprintCap`. (`IdentityMatcher`'s `KnownGame.fingerprints` is oldest first, so section 09 reverses.)
+- `fingerprints(game: UUID, scheme: Int = Fingerprint.currentScheme) -> [Fingerprint]`:
+  - It returns the live fingerprints **oldest first** (the order `KnownGame.fingerprints` uses), at most the newest `fingerprintCap`.
   - Values that fail to decode are skipped.
-- `addFingerprint<F: Codable & Sendable & Equatable>(_ fp: F, scheme: Int, game: UUID)`:
-  - It writes the value's digest key, which refreshes an equal fingerprint's recency.
+- `addFingerprint(_ fp: Fingerprint, game: UUID)`:
+  - The key is `fp/<fp.scheme>/<fp.exact>`: fingerprints are the same when their `exact` values are, as in `IdentityMatcher.adding`. So the same build with a changed engine id (after a blocklist update) replaces its entry, and re-adding refreshes recency.
   - It then tombstones all but the newest `fingerprintCap`. Concurrent adds on two devices can briefly leave more live after a merge; reads cap them, and the next add trims.
-- `removeFingerprint<F: Codable & Sendable & Equatable>(_ fp: F, scheme: Int, game: UUID)` tombstones that fingerprint's key. Split uses it.
+- `removeFingerprint(_ fp: Fingerprint, game: UUID)` tombstones the entry with that `exact`. Split uses it.
+- `mergeLinks() -> [GameID: GameID]` reads every live `merged/<A>` link, for `IdentityMatcher.resolve`.
 - `copySettings(from: UUID, to: UUID, onlyWhereUnset: Bool)`:
   - It copies the source game's effective keys into the target with fresh ticks.
   - It excludes `deletedAt` and `fp/*`, because fingerprints are moved explicitly.

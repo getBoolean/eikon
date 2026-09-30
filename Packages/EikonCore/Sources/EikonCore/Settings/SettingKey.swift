@@ -40,7 +40,7 @@ extension SettingKey where Value == String {
 
     /// Global `merged/<uuid>`: the game this merged-away game now resolves to, as a UUID string.
     public static func merged(_ game: UUID) -> SettingKey<String> {
-        SettingKey(name: "merged/\(game.uuidString.lowercased())", scope: .global)
+        SettingKey(name: SettingPath.mergedPrefix + game.uuidString.lowercased(), scope: .global)
     }
 }
 
@@ -50,9 +50,9 @@ extension SettingKey where Value == Int64 {
 }
 
 extension SettingKey where Value == JSONValue {
-    /// Fingerprint `fp/<scheme>/<digest>`, keyed by a digest of the value itself, so two
-    /// devices adding different fingerprints never overwrite each other and equal ones
-    /// share a key. The store keeps the newest `SettingsStore.fingerprintCap` live.
+    /// Fingerprint `fp/<scheme>/<digest>`, keyed by the fingerprint's exact value, so two
+    /// devices adding different builds never overwrite each other and the same build
+    /// shares a key. The store keeps the newest `SettingsStore.fingerprintCap` live.
     public static func fingerprint(scheme: Int, digest: String) -> SettingKey<JSONValue> {
         SettingKey(name: "\(SettingPath.fingerprintPrefix)\(scheme)/\(digest)", scope: .game)
     }

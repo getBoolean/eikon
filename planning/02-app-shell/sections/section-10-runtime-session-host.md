@@ -253,14 +253,16 @@ This is an EikonKit seam, so tests can observe the sentinel phase without consum
 
 ```swift
 @MainActor public protocol SessionRecorder: AnyObject {
-    func arm(_ record: SessionRecord) throws   // sentinel arm + open fault file
+    func arm(_ record: SessionRecord) throws   // sentinel arm, then Breadcrumbs.open, then FaultRecord.open
     func setPhase(_ phase: SessionRecord.Phase)
     func add(_ event: BreadcrumbEvent)
-    func disarm()                              // close fault file + sentinel disarm (removes breadcrumbs/fault)
+    func disarm()                              // Breadcrumbs.close + FaultRecord.close, then sentinel disarm (removes both files)
 }
 ```
 
 `LiveSessionRecorder` wraps section 07's `SessionSentinel`, `Breadcrumbs` and fault-file API over `Application Support/Eikon/sessions/`.
+
+**Order matters.** `SessionSentinel.arm` unlinks any old `breadcrumbs.bin` and `fault.bin`, so open the ring and the fault file only **after** arming. Opened before, every breadcrumb would go to an unlinked file, reports would carry none, and `likelyMemoryKill` could never be classified. Close both before disarming. Add one test through `LiveSessionRecorder` over a temp directory: arm, append a breadcrumb, then consume with a new `SessionSentinel`, and expect the breadcrumb to be there.
 
 ### 6. `GameSession.swift`
 

@@ -1,7 +1,8 @@
 import Foundation
 
-/// The game-specific file whose size and partial hash go into the exact signal: per
-/// engine, the first candidate that exists. Launchers and engine players never qualify.
+/// The game's main data file, recorded in `DetectionResult.keyFile` for detection output
+/// and the scanner (the fingerprint hashes every file). Per engine, the first candidate
+/// that exists; launchers and engine players never qualify.
 public enum KeyFile {
     /// A path relative to the game root, or nil when the engine's candidates are all absent.
     public static func locate(engine: Engine, executables: [GamePlatform: ExecutableInfo], root: URL) throws -> String? {

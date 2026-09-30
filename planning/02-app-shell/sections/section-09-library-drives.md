@@ -18,8 +18,8 @@ These must already be in place. Use their APIs; do not re-implement them.
 
 - **section-01-core-package.** Provides the `Packages/EikonCore` package, the EikonKit → EikonCore dependency, the test targets and the shared `Persisted` rules (§6.2 below): the format header, the rule that a future-format file is read-only, tolerant per-element decoding that keeps raw bad elements, and atomic write + fsync.
 - **section-02-detection.** Provides `GameDetector.detect(folder:) -> DetectionResult?`, `DetectionResult` (including `detectorVersion` and `keyFile`), `Engine`, `FolderListing`, and the test `Fixtures.swift` that synthesizes fake game folders.
-- **section-03-identity.** Provides `GameID`, `Fingerprint`, `Keyed`, `NameNormalizer`, `FingerprintBuilder` (HMAC under the library secret), the pure `IdentityMatcher` (known location, exact, engine id; file names never match), and the merge/split logic with `merged/` link resolution.
-- **section-05-settings-store.** Provides `SettingsStore` with its per-game keys: `displayName`, `route.override`, `deletedAt` and `fp/<scheme>/<n>`. It also provides `removeAll(game:)` (which writes `deletedAt`), `fingerprints(game:)`, `addFingerprint(_:game:)` and the global `merged/<uuid>` key.
+- **section-03-identity.** Provides `GameID`, `Fingerprint`, `Keyed`, `NameNormalizer`, `FingerprintBuilder` (HMAC under the library secret: `build` is a full content hash with progress and cancellation; `engineID` is a few small reads; `contentStamp` is a cheap recursive stat digest), the pure `IdentityMatcher` (`quickMatch`: known location and engine id; `match`: known location, exact, engine id; file names never match), and the merge/split logic with `merged/` link resolution.
+- **section-05-settings-store.** Provides `SettingsStore` with its per-game keys: `displayName`, `route.override`, `deletedAt` and fingerprints under `fp/<scheme>/<exact>`. It also provides `removeAll(game:)` (which writes `deletedAt`), `fingerprints(game:)` (oldest first, as `KnownGame.fingerprints` expects), `addFingerprint(_:game:)`, `removeFingerprint(_:game:)` (all matching on `exact`), `mergeLinks()` and the global `merged/<uuid>` key.
 - **section-06-route-picker.** Provides `RoutePicker.decide(detection:environment:override:)`, `RouteDecision`, `RouteEnvironment` and `RouteID`.
 
 Things this section does **not** depend on, but must leave room for:
@@ -84,7 +84,8 @@ Drives are temp directories. Game folders come from section 02's `Fixtures`.
 
 - Test: the scanner ignores dot folders, including an in-progress `.eikon-importing-*`, and ignores `Inbox` on the built-in drive.
 - Test: a new subfolder becomes a location. A vanished one becomes missing, and is not deleted.
-- Test: a folder whose contents keep changing is not fingerprinted until two scans at least the quiescence interval apart see the same listing and key file. Use the injected clock.
+- Test: a folder whose contents keep changing, including files below the top level, gets no game id or fingerprint until two scans at least the quiescence interval apart see the same content stamp. Use the injected clock.
+- Test: a fingerprint whose content stamp changed while it was being built is discarded and recomputed.
 - Test: a location with a previous `unknown` or `nil` detection is re-detected on the next scan after its listing changes.
 
 **Import**
@@ -98,7 +99,9 @@ Drives are temp directories. Game folders come from section 02's `Fixtures`.
 
 **Identity across drives**
 
-- Test: copying a patch over a game's files on a drive, then rescanning, keeps the game's id and settings, and re-runs detection. A patch here means a resized key file plus new files.
+- Test: copying a patch over a game's files on a drive, then rescanning, keeps the game's id and settings, re-runs detection and records a new fingerprint. A patch here replaces a file below the top level at the same size, plus a new file.
+- Test: a newly quiescent game gets a game id (from `quickMatch`) before its full fingerprint is done, and its settings are editable then.
+- Test: a provisional game with no user settings whose full fingerprint exact-matches another game is merged into it silently; one with settings gets a suggestion instead.
 - Test: renaming a game folder on a drive, or moving it to another drive, keeps its game id.
 - Test: the same game (an exact match) on two drives shows as one game with two locations.
 - Test: a second, different version of a game that is already present (same engine id, different contents, while the first is live) appears as a new game with a suggestion. Merging it moves its location under the first game.
@@ -186,7 +189,8 @@ public struct GameLocation: Codable, Sendable, Equatable, Identifiable {
     public var fingerprint: Fingerprint?            // latest; nil until computed
     public var gameID: GameID?           // nil only until the first match runs
     public var identity: IdentityState   // pending / waitingForQuiescence / fingerprinting / identified / failed(code) / missing
-    public var lastSeen: LocationSeen    // listing digest + mtime + key-file size/mtime + when seen, for re-detect/quiescence
+    public var lastSeen: LocationSeen    // content stamp + top-level listing digest + when seen, for re-detect/quiescence
+    public var fingerprintedStamp: String? // the content stamp the current fingerprint was built from
     public var lastUsedAt: Date?         // launch-location preference
     public var suggestion: [GameID]      // non-blocking "same game as…?" candidates
     public var dismissedSuggestions: [GameID]
@@ -267,18 +271,28 @@ For each available drive, at launch and on scene activation, the scanner diffs t
 - **Changed folder:** run detection again when any of these hold:
   - the folder's mtime changed
   - the top-level listing digest changed
+  - the content stamp (`FingerprintBuilder.contentStamp`) changed
   - the last detection was `nil` or `unknown`
   - the stored `detectorVersion` is older than the current one (detection is a cache)
-- **Quiescence.** Fingerprinting and matching start only after the same listing digest, key-file size and key-file mtime have been seen on two scans at least 10 seconds apart. Take the time from an injected clock.
+- **Quiescence.** Matching and fingerprinting start only after the same **content stamp** (every file's path, size and mtime, at every depth, with the fingerprint's exclusions) has been seen on two scans at least 10 seconds apart. A top-level check isn't enough: a copy lays down top-level entries early while deep files are still arriving. Take the time from an injected clock. The stamp is cheap (stat only), but walking a huge tree still takes a moment, so compute it off the main actor.
   - Until then the location is `waitingForQuiescence` ("Waiting for copy to finish…").
   - This covers folders still being copied in, and patches being copied over a game.
-- **Changed contents at a known location** (for example a patch copied over the files): the location keeps its game id (matcher rule 1). Once quiescent, the new fingerprint is computed and added to the game (`addFingerprint`), and the game is re-detected, which may change its route.
+- **Changed contents at a known location** (for example a patch copied over the files, at any depth): the content stamp differs from `fingerprintedStamp`. The location keeps its game id (matcher rule 1). Once quiescent, the new fingerprint is computed and added to the game (`addFingerprint`), and the game is re-detected, which may change its route.
 - **Vanished folder:** the location becomes `missing`. Never delete it automatically.
 - **Threading.** Scans run off the main actor and publish results on it. Scans are **suspended while a game session is active**.
+
+**Identity in two passes.** The full hash can take minutes, and a game's settings and Launch wait on its id, so the id comes first:
+
+1. **Quick pass**, as soon as a location is quiescent: `FingerprintBuilder.engineID` (a few small reads), then `IdentityMatcher.quickMatch` (known location, then engine id). The location gets its game id at once: kept, attached, or newly minted (**provisional** until the full pass confirms it).
+2. **Full pass**, on the fingerprint worker below: `FingerprintBuilder.build`, then `IdentityMatcher.match`.
+   - It agrees with the quick pass (same game): add the fingerprint.
+   - It exact-matches a different game: the folder is a copy of that game. If the provisional game has no user data yet (no settings besides fingerprints), merge it into that game silently (`merged/` link, locations move). Otherwise keep it and set a suggestion naming that game.
+   - Suggestions from either pass follow the usual rules (`dismissedSuggestions`).
 
 **Fingerprint worker.** One serial background worker (a single task, or an actor draining a queue):
 
 - It takes quiescent locations from a queue. The **currently viewed** location, set by the controller, jumps to the front.
+- It records the content stamp before hashing and checks it again afterwards. If the stamp changed, the result is discarded and the location waits for quiescence again. Otherwise it stores the stamp as `fingerprintedStamp`.
 - For each location, it opens the drive's access token, runs `FingerprintBuilder` on the detected game root, closes the token, then runs `IdentityMatcher` against:
   - **Note from section 03:** `FingerprintBuilder.build` hashes every file of the game (saves excluded), which can take minutes. Pass its `progress` to the location's UI state and an `isCancelled` that trips on `suspendBackgroundWork()` or removal; a cancelled location goes back on the queue and restarts later.
   - this device's locations
@@ -397,7 +411,7 @@ Section 05 builds only the EikonCore `SettingsStore`. This section adds its Eiko
 
 - It exposes typed reads and writes for the 02 keys (`displayName`, `route.override`) and publishes a change so views and `LibraryController` refresh. `LibraryController` recomputes route decisions when `route.override` changes.
 - Display-name edits commit on submit, not on every keystroke. The view (section 13) holds the draft and calls the controller once.
-- A location's settings are read-only in the UI until the location has a game id. That takes a second or two after the folder is quiescent.
+- A location's settings are read-only in the UI until the location has a game id. The quick identity pass gives one right after the folder is quiescent, without waiting for the full hash.
 - `flush()` passes through to the store. `EikonApp` calls it on scene background, and `GameSession` (section 10) calls it before a session starts.
 - It exposes the store's `replicaID` and `forkedFrom` for the Developer section (section 14).
 - No automated test of its own. The store's behavior is covered by section 05's tests.

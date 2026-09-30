@@ -98,6 +98,13 @@ public struct CollectionSummary: Sendable {
     public func formatted(perFolder: Bool) -> String {
         var lines: [String] = []
         func line(_ key: String, _ value: Int) { lines.append("\(key): \(value)") }
+        // A game can ship its own module named after itself, so a name is printed only when
+        // at least two different games carry it; the rest are counted as `other`.
+        func printNames(_ prefix: String, _ names: KeyPath<EngineDetails, [String]>) {
+            let (shared, other) = sharedNames(names)
+            for (name, count) in shared.sorted(by: { $0.key < $1.key }) { line("\(prefix).\(name)", count) }
+            line("\(prefix).other", other)
+        }
         func group<Key>(_ prefix: String, _ counts: [Key: Int], name: (Key) -> String) {
             for (key, value) in counts.map({ (name($0.key), $0.value) }).sorted(by: { $0.0 < $1.0 }) {
                 line("\(prefix).\(key)", value)
@@ -119,8 +126,8 @@ public struct CollectionSummary: Sendable {
         group("gamemaker", tally(games.compactMap(\.details.gameMakerBuild))) { $0.rawValue }
         group("arch", architectureCounts) { $0.rawValue }
         group("arch.game-exe", gameExeArchitectureCounts) { $0.rawValue }
-        group("plugin", pluginCounts) { $0 }
-        group("renpy-native", nativeExtensionCounts) { $0 }
+        printNames("plugin", \.pluginFileNames)
+        printNames("renpy-native", \.renpyNativeExtensions)
         for rule in ExclusionRule.allCases { line("exclusion.\(rule.rawValue)", exclusionCounts[rule] ?? 0) }
         group("identity.declared", declaredIDCounts) { $0.rawValue }
         line("identity.declared-generic", genericDeclaredIDCount)
@@ -144,6 +151,32 @@ public struct CollectionSummary: Sendable {
             }
         }
         return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// Occurrence counts of names found in at least two distinct games, and how many
+    /// occurrences were left out. Copies of one game (the same engine and declared id) count once.
+    private func sharedNames(_ names: KeyPath<EngineDetails, [String]>) -> (shared: [String: Int], other: Int) {
+        var games: [String: Set<String>] = [:]
+        var occurrences: [String: Int] = [:]
+        for (index, folder) in folders.enumerated() {
+            guard let detection = folder.detection else { continue }
+            let game: String
+            if case .found(let value)? = folder.declaredID {
+                game = "\(detection.engine.rawValue):\(value)"
+            } else {
+                game = "#\(index)"
+            }
+            for name in Set(detection.details[keyPath: names]) {
+                games[name, default: []].insert(game)
+                occurrences[name, default: 0] += 1
+            }
+        }
+        var shared: [String: Int] = [:]
+        var other = 0
+        for (name, count) in occurrences {
+            if games[name, default: []].count >= 2 { shared[name] = count } else { other += count }
+        }
+        return (shared, other)
     }
 
     /// `version.8.1.3` or `era.7.4-open`.

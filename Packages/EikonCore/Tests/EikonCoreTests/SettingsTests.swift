@@ -246,16 +246,39 @@ private struct SplitMix64: RandomNumberGenerator {
     }
 }
 
-@Test func fingerprintSlotsKeepTheMostRecent() throws {
+private func build(_ n: Int, engine: String? = nil) -> Fingerprint {
+    Fingerprint(engineID: engine.map { Keyed(hex: $0) }, exact: Keyed(hex: String(format: "%064x", n)))
+}
+
+@Test func fingerprintsKeepTheMostRecent() throws {
     try withTempDir { dir in
         let clock = TestClock(), settings = try store(dir, clock), game = UUID()
-        let added = (0..<(SettingsStore.fingerprintCap + 2)).map { "fingerprint-\($0)" }
+        let added = (0..<(SettingsStore.fingerprintCap + 2)).map { build($0) }
         for fingerprint in added {
-            settings.addFingerprint(fingerprint, scheme: 1, game: game)
+            settings.addFingerprint(fingerprint, game: game)
             clock.advance(1)
         }
-        let kept = settings.fingerprints(game: game, scheme: 1, as: String.self)
-        #expect(kept == Array(added.suffix(SettingsStore.fingerprintCap).reversed()))
-        #expect(!kept.contains(added[0]))
+        #expect(settings.fingerprints(game: game) == Array(added.suffix(SettingsStore.fingerprintCap)))
+    }
+}
+
+@Test func sameBuildWithANewEngineIDReplacesItsFingerprint() throws {
+    try withTempDir { dir in
+        let clock = TestClock(), settings = try store(dir, clock), game = UUID()
+        settings.addFingerprint(build(1, engine: "aa"), game: game)
+        clock.advance(1)
+        settings.addFingerprint(build(1, engine: "bb"), game: game)
+        #expect(settings.fingerprints(game: game) == [build(1, engine: "bb")])
+
+        settings.removeFingerprint(build(1), game: game)
+        #expect(settings.fingerprints(game: game).isEmpty)
+    }
+}
+
+@Test func mergeLinksReadBack() throws {
+    try withTempDir { dir in
+        let settings = try store(dir), from = UUID(), to = UUID()
+        settings.set(SettingKey<String>.merged(from), to.uuidString)
+        #expect(settings.mergeLinks() == [GameID(uuid: from): GameID(uuid: to)])
     }
 }

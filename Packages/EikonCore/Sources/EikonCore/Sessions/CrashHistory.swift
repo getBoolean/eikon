@@ -67,9 +67,15 @@ public final class CrashHistory: @unchecked Sendable {
         return entry
     }
 
-    /// Newest first.
-    public func entries(for game: GameID) -> [CrashEntry] {
-        lock.withLock { Self.newestFirst(document.entries.elements.filter { $0.record.gameID == game }) }
+    /// Newest first. With merge `links`, entries recorded under games merged into `game`
+    /// are included.
+    public func entries(for game: GameID, links: [GameID: GameID] = [:]) -> [CrashEntry] {
+        let target = IdentityMatcher.resolve(game, links: links)
+        return lock.withLock {
+            Self.newestFirst(document.entries.elements.filter {
+                IdentityMatcher.resolve($0.record.gameID, links: links) == target
+            })
+        }
     }
 
     public func entry(id: UUID) -> CrashEntry? {

@@ -73,6 +73,24 @@ public enum IdentityMatcher {
         return newGame(declared)
     }
 
+    /// The fast first pass, before the full hash is done: rule 1 (known location) and rule 3
+    /// (engine id) only, else a new id. Once `FingerprintBuilder.build` finishes, run `match`
+    /// again: an exact match elsewhere then means this was a copy of that game, which the
+    /// library merges silently if the provisional game has no user data yet, else suggests.
+    public static func quickMatch(engineID: Keyed?, scheme: Int = Fingerprint.currentScheme, at location: LocationKey,
+                                  knownLocations: [LocationKey: GameID], games: [KnownGame],
+                                  mint: () -> GameID = GameID.random) -> MatchResult {
+        if let id = knownLocations[location], !games.contains(where: { $0.id == id && $0.isDeleted }) {
+            return .keep(id)
+        }
+        guard let engineID else { return .newGame(mint(), suggestions: []) }
+        let declared = games.filter { game in
+            !game.isDeleted && game.fingerprints.contains { $0.scheme == scheme && $0.engineID == engineID }
+        }
+        if declared.count == 1, !declared[0].hasLiveLocationHere { return .attach(declared[0].id, .engineID) }
+        return .newGame(mint(), suggestions: declared.map(\.id).sorted())
+    }
+
     /// `list` with `fingerprint` as its newest entry: an equal `exact` moves to newest
     /// instead of repeating, and only the newest `Fingerprint.maxPerGame` stay.
     public static func adding(_ fingerprint: Fingerprint, to list: [Fingerprint]) -> [Fingerprint] {
