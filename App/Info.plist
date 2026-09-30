@@ -22,6 +22,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>EKGitCommit</key>
 	<string>$(EIKON_GIT_COMMIT)</string>
+	<key>EKRepositoryURL</key>
+	<string>https://github.com/getBoolean/eikon</string>
 	<key>EKPackageKind</key>
 	<string>development</string>
 	<key>LSRequiresIPhoneOS</key>

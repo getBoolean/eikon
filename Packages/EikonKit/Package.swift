@@ -17,7 +17,11 @@ let package = Package(
             .product(name: "EikonCore", package: "EikonCore"),
             .product(name: "CEikonSession", package: "EikonCore"),
         ]),
-        .testTarget(name: "EikonKitTests", dependencies: ["EikonKit", "CEikonJIT"]),
+        .testTarget(name: "EikonKitTests", dependencies: [
+            "EikonKit",
+            "CEikonJIT",
+            .product(name: "CEikonSession", package: "EikonCore"),
+        ]),
     ],
     swiftLanguageModes: [.v6]
 )

@@ -203,3 +203,24 @@ The only code this section writes is the closure-building helper, if one is want
 - The three tests above pass under `make test` (the simulator EikonKit suite).
 - No code path puts the display name, a folder name, a fingerprint or a file hash into the issue URL or into history.
 - Manual check, done in section 16: after a simulated crash in the developer test session and a relaunch, the banner appears with no "Try…" action, since it is a `test` record. *Report on GitHub* opens a prefilled issue that carries only codes and the report id.
+
+## As built
+
+**Files.**
+- `Packages/EikonKit/Sources/EikonKit/Diagnostics/CrashReportController.swift`.
+- `Packages/EikonKit/Tests/EikonKitTests/CrashReportControllerTests.swift`: 4 tests, one of them parameterized over 6 rows.
+- `App/Info.plist` gains `EKRepositoryURL`.
+- The EikonKit test target depends on the `CEikonSession` product. The tests write breadcrumbs through the fd-based `eikon_breadcrumb_write`, not the process-wide ring, so they are safe in parallel.
+
+**Deviations and additions.**
+- **Types and signatures.**
+  - History entries are section 07's `CrashEntry`.
+  - `history(for:links:)` takes merge links.
+  - `Dependencies` gains an injectable `@MainActor now`.
+- **Clipboard notice.** `clipboardNotice` reflects only the latest report. `acknowledgeClipboardNotice()` clears it without dismissing the banner, for the game detail screen.
+- **`tryAlternative`** re-checks the offer before writing `route.override`, because a view may hold a stale banner.
+- **`refreshAlternative()`** recomputes the offer. Wire it to settled library decisions only.
+- **Left for section 12:**
+  - the live `Dependencies` wiring, including a missing or invalid `EKRepositoryURL`
+  - surfacing `CrashHistory.unreadableFiles`, because an unreadable history keeps new entries for the current launch only
+- **Known limits, for section 16 to judge:** breadcrumbs beyond the last 20 are dropped silently, and the clipboard fallback copies the device report without breadcrumbs.
