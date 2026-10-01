@@ -26,6 +26,17 @@ enum RouteStrings {
         return RouteID(rawValue: raw).map(name) ?? raw
     }
 
+    /// The games a route serves, for the device screen's route table.
+    static func servesKey(_ route: RouteID) -> LocalizedStringKey {
+        switch route {
+        case .nativeKirikiri: "route.serves.native-kirikiri"
+        case .nativeRenPy: "route.serves.native-renpy"
+        case .wineFEX: "route.serves.wine-fex"
+        case .wineBox64: "route.serves.wine-box64"
+        case .linuxFEX: "route.serves.linux-fex"
+        }
+    }
+
     static func verdictKey(_ verdict: RouteVerdict) -> LocalizedStringKey {
         switch verdict {
         case .runnable: "route.verdict.runnable"

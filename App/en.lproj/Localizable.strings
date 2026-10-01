@@ -331,3 +331,26 @@
 "import.space.detail" = "The copy needs %1$@, and the drive has %2$@ free.";
 "import.progress" = "%1$@ of %2$@";
 "import.copying.footer" = "Keep Eikon open until the copy finishes.";
+
+/* This device: routes, gates and developer tools */
+"status.section.routes" = "Routes";
+"status.section.gates" = "Device checks";
+"status.section.developer" = "Developer";
+"route.serves.native-kirikiri" = "Kirikiri games";
+"route.serves.native-renpy" = "Ren'Py games";
+"route.serves.wine-fex" = "Windows games (Unity, Kirikiri, GameMaker, BGI and others)";
+"route.serves.wine-box64" = "32-bit Windows games (Unity, Kirikiri, GameMaker, BGI and others)";
+"route.serves.linux-fex" = "Linux games";
+"developer.settingsForked" = "Settings from a newer version of Eikon were found and kept unchanged. Changes made in this version are stored separately.";
+"developer.runTestSession" = "Run test session";
+"developer.simulateCrash" = "Simulate crash during session";
+"developer.simulateCrash.footnote" = "Eikon quits about 5 seconds after the session starts. A crash report appears on the next launch.";
+"developer.testSession.failed" = "The test session couldn't start.";
+"developer.replicaID" = "Settings replica ID";
+"developer.gates" = "Gate store";
+"developer.gates.empty" = "Empty";
+"developer.gates.stamp" = "App %1$@ · iOS %2$@";
+"developer.gates.result.passed" = "passed";
+"developer.gates.result.failed" = "failed";
+"developer.gates.result.unmeasured" = "not measured";
+"developer.testPattern.errors" = "Command-buffer errors: %ld";

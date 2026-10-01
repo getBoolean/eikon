@@ -1,10 +1,20 @@
+import EikonCore
 import EikonKit
 import SwiftUI
 
-/// Eikon's one screen. Observes the controller so JIT rows update live, and
-/// reads the static device facts once.
+/// The "This device" screen. Observes the controller so JIT and route rows update live,
+/// and reads the static device facts once.
 struct StatusView: View {
     @ObservedObject var controller: JITController
+    @ObservedObject var presenter: SessionPresenter
+    let gates: GateStore
+    let settings: SettingsController
+    let registry: RuntimeRegistry
+
+    @State private var routes: [RouteRow] = []
+    @State private var gateRows: [GateRow] = []
+    @State private var gateEntries: [GateStoreEntryRow] = []
+    @State private var testSessionFailed = false
 
     @State private var deviceSystem: LiveDeviceSystem?
     @State private var device: DeviceRows?
@@ -25,12 +35,46 @@ struct StatusView: View {
             onRetryJIT: { controller.retryTrollStoreJIT() },
             onRetryProbe: { controller.retryProbe() },
             onCopyReport: copyReport,
-            onShareReport: shareReport
+            onShareReport: shareReport,
+            routes: routes,
+            gates: gateRows,
+            developer: DeveloperRows(replicaID: settings.replicaID.description, settingsForked: settings.forkedFrom != nil,
+                                     gateEntries: gateEntries, sessionActive: presenter.isSessionActive,
+                                     testSessionFailed: testSessionFailed),
+            onRunTestSession: { runTestSession(crash: false) },
+            onSimulateCrash: { runTestSession(crash: true) }
         )
         .sheet(item: $shareItem) { item in
             ActivityView(items: [item.url])
         }
-        .onAppear(perform: loadDeviceFacts)
+        .onAppear {
+            loadDeviceFacts()
+            refreshRoutes()
+        }
+        .onChange(of: controller.status) { _ in refreshRoutes() }
+    }
+
+    /// Nothing writes gates in 02, so JIT changes and appearing are enough.
+    private func refreshRoutes() {
+        let states = gates.states()
+        routes = DeviceRouteTable.rows(environment: RouteEnvironment(
+            jitUsable: controller.status.usable, gates: states, builtRoutes: registry.builtRoutes, runtimeChecks: [:]))
+        gateRows = DeviceRouteTable.gateRows(states: states, current: gates.current())
+        gateEntries = gates.entries().map(GateStoreEntryRow.init)
+    }
+
+    private func runTestSession(crash: Bool) {
+        testSessionFailed = false
+        Task {
+            do {
+                try await presenter.launchTest(try TestSession.game(),
+                                               runtime: crash ? CrashingTestPatternRuntime.self : TestPatternRuntime.self)
+            } catch SessionPresenter.Failure.sessionActive {
+                // A second tap while one starts; that session is running.
+            } catch {
+                testSessionFailed = true
+            }
+        }
     }
 
     private var appRows: AppInfoRows {
@@ -68,7 +112,8 @@ struct StatusView: View {
             evidence: controller.evidence,
             jit: controller.status,
             system: deviceSystem,
-            now: Date()
+            now: Date(),
+            gates: gates.current()
         )
     }
 
@@ -110,6 +155,11 @@ struct StatusContent: View {
     let onRetryProbe: () -> Void
     let onCopyReport: () -> Void
     let onShareReport: () -> Void
+    let routes: [RouteRow]
+    let gates: [GateRow]
+    let developer: DeveloperRows
+    let onRunTestSession: () -> Void
+    let onSimulateCrash: () -> Void
 
     /// No navigation view of its own: RootView's column navigation hosts it.
     var body: some View {
@@ -117,8 +167,11 @@ struct StatusContent: View {
             appSection
             installSection
             jitSection
+            RouteTableSection(routes: routes, jitReason: status.reason)
+            GateTableSection(gates: gates)
             deviceSection
             reportSection
+            DeveloperSection(rows: developer, onRunTestSession: onRunTestSession, onSimulateCrash: onSimulateCrash)
         }
         .listStyle(.insetGrouped)
         .navigationTitle(Text("status.title"))
@@ -437,7 +490,10 @@ private func sampleContent(status: JITStatus, method: InstallMethod, pending: Bo
     NavigationView {
         StatusContent(app: sampleApp, installMethod: method, status: status,
                       isRequestingTrollStoreJIT: pending, device: sampleDevice, copied: false, reportError: false,
-                      onRetryJIT: {}, onRetryProbe: {}, onCopyReport: {}, onShareReport: {})
+                      onRetryJIT: {}, onRetryProbe: {}, onCopyReport: {}, onShareReport: {},
+                      routes: RouteTableSection_Previews.routes, gates: RouteTableSection_Previews.gates(.unmeasured),
+                      developer: DeveloperSection_Previews.rows(entries: [], forked: false),
+                      onRunTestSession: {}, onSimulateCrash: {})
     }
     .navigationViewStyle(.stack)
 }

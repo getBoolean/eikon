@@ -5,21 +5,23 @@ import UIKit
 /// The one way a game session starts: the Launch button (section 13) and the developer
 /// test sessions (section 14). Refuses a second session while one is active.
 @MainActor
-final class SessionPresenter {
+final class SessionPresenter: ObservableObject {
     enum Failure: Error {
         case sessionActive, noWindow, driveNotConnected
     }
 
     private let library: LibraryController
     private let settings: SettingsController
-    private var active: GameSessionHostViewController?
+    /// Developer tools disable their buttons while a session runs.
+    @Published private(set) var isSessionActive = false
+    private var active: GameSessionHostViewController? {
+        didSet { isSessionActive = active != nil }
+    }
 
     init(library: LibraryController, settings: SettingsController) {
         self.library = library
         self.settings = settings
     }
-
-    var isSessionActive: Bool { active != nil }
 
     /// Runs the game from `location`. The drive opens once, here, and stays open for the
     /// whole session, so the game root and the access belong to the same resolution.

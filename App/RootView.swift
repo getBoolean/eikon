@@ -78,7 +78,9 @@ struct RootView: View {
         switch target {
         case .library: LibraryView(services: services)
         case .drives: DrivesView(library: services.library)
-        case .device: StatusView(controller: jit)
+        case .device:
+            StatusView(controller: jit, presenter: services.presenter, gates: services.gates, settings: services.settings,
+                       registry: services.registry)
         case .credits: DestinationPlaceholder(titleKey: "credits.title")
         }
     }

@@ -340,3 +340,44 @@ These route strings already exist from section 12. Only add what is missing.
 - **Swift 6 language mode** with complete concurrency checking.
 - **Exhaustive enum→key switches** with no `default:`. `GateName` is a `RawRepresentable` struct, so switch over the known constants with `if`/`==` and fall back to the generic "<gate> check" string for others. That fallback is the one intended non-exhaustive case.
 - **Main thread:** the main thread never waits unbounded on the render thread. The host's `close(timeout:)` is bounded, and `stop()` waits for at most about 1 s.
+
+## As built
+
+**Files.**
+- `App/Device/StatusView.swift`, moved from `App/StatusView.swift`.
+- `App/Device/RouteTableSection.swift`, with `RouteRow`, `GateRow` and the `DeviceRouteTable` helpers.
+- `App/Device/DeveloperSection.swift`.
+- `App/Session/TestPatternRuntime.swift`, which also holds `TestSession`, the synthetic game id and scratch root.
+- `RouteStrings.servesKey` was added to `App/Strings/RouteStrings.swift`. Section 12's `GateStrings.stateKey` is reused.
+- `project.yml` needed no change, because the `App` folder source picks up subfolders.
+
+**Wiring.**
+- `StatusView` takes `presenter`, `gates`, `settings` and `registry` through its initializer, and `RootView` passes them in.
+- `SessionPresenter` is now an `ObservableObject` with a published `isSessionActive`. The developer buttons are disabled while a session runs.
+- The device report includes `gates.current()`.
+
+**Test sessions.**
+- These go through section 10's existing `SessionPresenter.launchTest`, which records the route as `"test"`. No change to section 10 was needed.
+- `GameRuntime` requires a `static route`, so `TestPatternRuntime.route` is a documented placeholder. It is never registered, and `launch` asserts that it runs only the test session's game.
+- `GameSession` creates runtimes with `init()`. "Simulate crash" therefore uses a `CrashingTestPatternRuntime` subclass, which overrides `class var crashDelay` to 5 s, in place of the planned `init(crashAfter:)`.
+
+**Test pattern.**
+- The pattern is a clear color that cycles through hues.
+- The view's `layoutSubviews` sets `drawableSize` on the main thread. The render thread only takes drawables from the layer.
+- `stop()` waits up to 1 s for the render thread, off the main thread.
+- The error label's timer runs in `.common` run-loop modes.
+
+**Other deviations.**
+- The gates section's header reads "Device checks".
+- The Box64 caption says "32-bit Windows games", because Box64 accepts only i386.
+- The extra string `developer.testSession.failed` appears when a test session fails to start. It is not shown for a double tap.
+
+**Code review fixes.**
+- `stop()` cancels the scheduled abort, so quitting the crash session early never aborts the app later.
+- Animation time no longer jumps forward after a pause.
+- Raw gate entries are keyed by position.
+- The error count uses `%ld`.
+
+**Verification:**
+- `make test` passes, and the app launches on the simulator.
+- The device checks (pause and background with an error count of 0, and simulated crash then banner) are manual. They are left for section 16.
