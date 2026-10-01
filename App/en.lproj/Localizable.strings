@@ -354,3 +354,10 @@
 "developer.gates.result.failed" = "failed";
 "developer.gates.result.unmeasured" = "not measured";
 "developer.testPattern.errors" = "Command-buffer errors: %ld";
+
+/* Credits */
+"credits.noThirdParty" = "Eikon includes no third-party components yet.";
+"credits.loadError" = "The acknowledgements couldn't be loaded.";
+"credits.license" = "License";
+"credits.revision" = "Revision";
+"credits.source" = "Source";

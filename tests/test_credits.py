@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -31,12 +32,15 @@ def _toml(table: str, entries: list[dict]) -> str:
 
 
 class Project:
+    version = "1.2.3"
+
     def __init__(self, repo) -> None:
         self.repo = repo
         self.root: Path = repo.path
         self.deps: list[dict] = []
         self.components: list[dict] = []
         repo.write("licenses/GPL-3.0-or-later.txt", "license text\n")
+        repo.write("VERSION", f"{self.version}\n")
         self.save()
 
     def add_dep(self, name: str) -> None:
@@ -119,3 +123,32 @@ def test_stale_notices_fail_until_regenerated(project, run_script):
 
     assert _cli(run_script, project, "notices", "--write").returncode == 0
     assert credits.check(project.root) == []
+
+
+def _app_json(project: Project) -> list[dict]:
+    out = project.root / "build" / "Acknowledgements.json"
+    credits.generate_app_json(project.root, out)
+    return json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_app_json_has_only_the_app_entry_without_components(project):
+    """One entry, marked as the app, carrying the repo's GPL text."""
+    entries = _app_json(project)
+    assert len(entries) == 1
+    assert entries[0]["isApp"] is True
+    gpl = (project.root / "licenses" / "GPL-3.0-or-later.txt").read_text(encoding="utf-8")
+    assert entries[0]["licenseText"] == gpl
+    assert project.version in entries[0]["revision"]
+
+
+def test_app_json_lists_components_after_the_app_entry(project):
+    """App entry first; only it is marked as the app."""
+    project.add_dep("libalpha")
+    project.credit("libalpha")
+    project.save()
+    entries = _app_json(project)
+    assert len(entries) == 2
+    assert entries[0]["isApp"] is True
+    assert [e["isApp"] for e in entries].count(True) == 1
+    assert entries[1]["isApp"] is False
+    assert entries[1]["name"] == "libalpha"

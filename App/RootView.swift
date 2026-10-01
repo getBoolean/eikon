@@ -72,7 +72,6 @@ struct RootView: View {
         }
     }
 
-    /// Section 15 replaces the Credits placeholder.
     @ViewBuilder
     private func destination(_ target: RootDestination) -> some View {
         switch target {
@@ -81,7 +80,7 @@ struct RootView: View {
         case .device:
             StatusView(controller: jit, presenter: services.presenter, gates: services.gates, settings: services.settings,
                        registry: services.registry)
-        case .credits: DestinationPlaceholder(titleKey: "credits.title")
+        case .credits: CreditsView()
         }
     }
 
@@ -92,16 +91,6 @@ func appRelative(_ url: URL) -> String {
     let base = LibraryPaths.support.resolvingSymlinksInPath().path + "/"
     let path = url.resolvingSymlinksInPath().path
     return path.hasPrefix(base) ? String(path.dropFirst(base.count)) : url.lastPathComponent
-}
-
-/// Stands in for a destination another section builds.
-private struct DestinationPlaceholder: View {
-    let titleKey: LocalizedStringKey
-
-    var body: some View {
-        List {}
-            .navigationTitle(Text(titleKey))
-    }
 }
 
 /// Shown instead of the app when its data can't be opened. An unreadable library secret

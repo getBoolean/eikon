@@ -7,6 +7,8 @@
 Every dependency in third_party/deps.toml needs a [[component]] entry in
 third_party/credits.toml. Its license files are committed under
 third_party/notices/<dep>/. Run from the repo root. See third_party/README.md.
+
+The in-app acknowledgements start with Eikon's own entry; every entry carries `isApp`.
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ NOTICES_DIR = Path("third_party") / "notices"
 NOTICES_FILE = Path("THIRD_PARTY_NOTICES.md")
 LICENSES_DIR = Path("licenses")
 EIKON_URL = "https://github.com/getBoolean/eikon"
+EIKON_LICENSE = "GPL-3.0-or-later"
+VERSION_FILE = Path("VERSION")
 
 _REQUIRED = {"name": str, "dep": str, "url": str, "license": str, "license_files": list}
 _NESTED_REQUIRED = {"path": str, "license": str, "license_files": list}
@@ -262,16 +266,58 @@ def generate_notices(repo_root: Path) -> str:
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
+def _app_entry(repo_root: Path) -> tuple[dict | None, list[str]]:
+    """Eikon's own acknowledgements entry (isApp: true), or the problems that prevent it:
+    a missing or empty VERSION, or a missing licenses/GPL-3.0-or-later.txt."""
+    problems = []
+    version_path = repo_root / VERSION_FILE
+    license_path = repo_root / LICENSES_DIR / f"{EIKON_LICENSE}.txt"
+    try:
+        version = version_path.read_text(encoding="utf-8").strip() if version_path.is_file() else ""
+    except OSError as err:
+        version = ""
+        problems.append(f"{VERSION_FILE}: {err.strerror}")
+    else:
+        if not version:
+            problems.append(f"{VERSION_FILE}: missing or empty")
+    try:
+        license_text = _read_text(license_path) if license_path.is_file() else None
+    except OSError as err:
+        license_text = None
+        problems.append(f"{LICENSES_DIR / license_path.name}: {err.strerror}")
+    else:
+        if license_text is None:
+            problems.append(f"{LICENSES_DIR / license_path.name}: missing")
+    if problems:
+        return None, problems
+    return {
+        "name": "Eikon",
+        "url": EIKON_URL,
+        "revision": f"getBoolean/eikon {version}",
+        "license": EIKON_LICENSE,
+        "licenseText": license_text,
+        "isApp": True,
+    }, []
+
+
 def generate_app_json(repo_root: Path, out: Path) -> None:
-    """Write the acknowledgements JSON: one object per component, in manifest order."""
-    components, deps = _require_clean(repo_root)
-    items = [
+    """Write the acknowledgements JSON: Eikon's own entry first, then one object per
+    component in manifest order. Every entry carries `isApp`."""
+    app, problems = _app_entry(repo_root)
+    try:
+        components, deps = _require_clean(repo_root)
+    except ValueError as err:
+        raise ValueError("\n".join(problems + [str(err)])) from None
+    if problems:
+        raise ValueError("\n".join(problems))
+    items = [app] + [
         {
             "name": c["name"],
             "url": c["url"],
             "revision": _revision(deps[c["dep"]]),
             "license": c["license"],
             "licenseText": "\n".join(f"{label}\n\n{text}" for label, text in _license_texts(repo_root, c)),
+            "isApp": False,
         }
         for c in components
     ]

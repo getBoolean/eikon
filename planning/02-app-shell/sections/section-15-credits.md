@@ -204,3 +204,29 @@ Create:
 - After `make generated`, `build/generated/Acknowledgements.json` contains exactly one entry, Eikon, with `isApp: true`, the GPL text, and a revision of `getBoolean/eikon <VERSION>`.
 - `make check` still passes. The notices output is unchanged.
 - In the app, Credits shows Eikon first and the "no third-party components yet" caption. The detail shows the selectable GPL text and the repository link.
+
+## As built
+
+**Files.** As planned:
+- `scripts/credits.py`, with `_app_entry`, `EIKON_LICENSE` and `VERSION_FILE`
+- `tests/test_credits.py` (2 new tests; `Project` writes `VERSION` with `Project.version`)
+- `Packages/EikonKit/Sources/EikonKit/Credits/Acknowledgements.swift`
+- `Packages/EikonKit/Tests/EikonKitTests/AcknowledgementsTests.swift`:
+  - 2 tests, one of them parameterized over 3 malformed inputs
+  - the decode test also checks that an entry without `isApp` reads as a component
+- `App/Credits/CreditsView.swift`
+- `RootView`'s placeholder view was removed
+
+**Generator.**
+- Problems with `VERSION` or `licenses/GPL-3.0-or-later.txt` are reported together with `_require_clean`'s problems, in one `ValueError`. This covers missing or empty files and read errors.
+- `make generated` writes one entry: Eikon, `isApp: true`, revision `getBoolean/eikon <VERSION>`.
+- `make check` and the notices output are unchanged.
+
+**View.**
+- `CreditsView` loads the file once, into a `static let`. iOS 15 builds sidebar destinations eagerly, so `@State` initialization would re-read the file on every update.
+- `CreditsContent` takes the load result, and the previews render it.
+- The "no third-party components" caption is the app section's footer. It shows only when the app entry exists.
+- The detail view shows license, revision and source, then the selectable license text. The entry's name is the navigation title.
+- The URL is linked only when it parses with a scheme.
+
+**Verification:** `make test` passes, along with `make generated` and `make check`. The Credits screen itself was not checked on the simulator; that is left for section 16's device pass.
