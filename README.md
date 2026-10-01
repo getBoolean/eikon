@@ -74,6 +74,21 @@ The probe deliberately triggers signals and handles them itself, but lldb stops 
 process handle SIGBUS SIGSEGV SIGILL SIGTRAP -s false -n false
 ```
 
+## Game drives
+
+Games live in game drives. Import copies a game into one, so most users never arrange folders by hand. For files managed by hand (in the Files app, or on a USB drive added as a game drive), the layout is:
+
+```
+<game drive>/            Eikon's own folder ("On My iPad/Eikon"), or a folder you added
+  <game folder>/         one folder per game, directly inside the drive
+    Game.exe, data …     the game's files
+  <game folder>/
+    <wrapper>/           or the game inside one wrapper folder
+      Game.exe, data …
+```
+
+A game nested any deeper, or still in an archive, is listed under "Not recognized". `make scan-collection` reads a folder laid out the same way.
+
 ## Install methods and artifacts
 
 - **Dopamine rootless deb** (`com.getboolean.eikon.rootless`, `iphoneos-arm64`), installed at `/var/jb/Applications/Eikon.app`. For Dopamine; verified on iPadOS 17.0. Needs no Developer Mode. It replaces the old `com.getboolean.eikon` deb from 0.1.0.

@@ -86,7 +86,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 
 ### Cloud saves
 - Syncs through a WebDAV server the user runs and configures (for example Nextcloud or a NAS). There is no Eikon-run service, and no iCloud or CloudKit, which need an Apple developer signature that none of the install methods have.
-- Syncs, per game and keyed by the game's hash:
+- Syncs, per game and keyed by the game id:
   - game saves, wherever the route keeps them: save paths in the Wine prefix (such as AppData and Documents), registry keys that games save to, Kirikiri `savedata`, and Ren'Py saves
   - the game's settings in Eikon (route, FEX overrides, controls, code page)
   - the translation glossary (the user's corrections for recurring terms)
@@ -107,7 +107,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
 ## Constraints
 
 - **No exploit and no JIT bypass of Eikon's own.** Eikon uses only what its install method already provides: Dopamine's jailbreak, TrollStore's installation and JIT launch, or a JIT enabler the user runs. Relying on Dopamine's and TrollStore's mechanisms is intended. Eikon itself does not attach a debugger or call `ptrace` or task-for-pid.
-- **No program titles** in the repo, logs, tests, or depictions. Game data is keyed by a hash of the main executable or archive. Test content is original.
+- **No program titles** in the repo, logs, tests, or depictions. Game data is keyed by a random game id (a UUID minted once per game). A game is recognized by a fingerprint: an engine-declared id and a full content hash of its files (saves and OS metadata excluded), stored and synced only as HMACs under a library secret. Test content is original.
 - **Target devices.** Dopamine: verified on iPadOS 17.0 (the Dopamine version was not recorded). TrollStore reaches iOS 17.0. AltStore runs on current iOS. Newer devices with TXM handle debugger-based JIT differently. Record device, iOS version, chip, install method, and build with every device result. The deployment target is iOS 15.0, but iOS 15 and 16 are untested (noted 2026-09-30): there is no such device, and the oldest simulator runtime available is iOS 17.
 - **Games run inside the app process on every install method.** There are no helper processes. One design serves all three installs, and TrollStore's JIT, which applies only to the process it launched, reaches the game. What that means:
   - 32-bit games get their address space from a "guest window" (see the Low-memory constraint below), not from the bottom 4 GB.
@@ -144,7 +144,7 @@ The collection's `Game.exe` files are 11 i386 and 5 amd64. Most games are Japane
   - Eikon is GPL-3.0-or-later. That is compatible with Wine (LGPL-2.1-or-later), FEX and Box64 (MIT), Kirikiroid2 (BSD-style), and GPL code.
   - Kirikiroid2's Kodi-derived video player may ship. Its Android-only storage code (from AmazeFileManager, GPL-3.0) is not needed on iOS.
   - Keep every upstream copyright header, and credit every component.
-- **Privacy:** game text leaves the device only through an online backend the user turned on. Saves, settings, and the glossary leave the device only for the WebDAV server the user configured. Remote paths use game hashes, never titles.
+- **Privacy:** game text leaves the device only through an online backend the user turned on. Saves, settings, and the glossary leave the device only for the WebDAV server the user configured. Remote paths use game ids, never titles.
 - **Stay on iOS:**
   - The iOS host layer is new.
   - Autorun's Horizon server, libnx, NRO packaging, and Switch drivers are not copied.
@@ -172,7 +172,7 @@ Two projects run Windows games with Wine and FEX on ARM64. Eikon takes design de
 - **Build:** a separate default Wine prefix for ARM64, compiled for `-march=armv8.2-a`.
 - **Results:** about 160 titles are verified for standalone play.
 
-For Eikon, that means: build the graphics layers as ARM64EC for 64-bit games; start from Valve's FEX config; and keep per-game FEX settings keyed by game hash, not by app id. Apple chips have a hardware x86 memory-ordering mode, but iOS offers no public way to turn it on.
+For Eikon, that means: build the graphics layers as ARM64EC for 64-bit games; start from Valve's FEX config; and keep per-game FEX settings keyed by game id, not by app id. Apple chips have a hardware x86 memory-ordering mode, but iOS offers no public way to turn it on.
 
 **Madeira (https://github.com/willfaust/Madeira, GPL-3.0).** An iOS research prototype that runs Windows x86-64 games on non-jailbroken iPhones with Wine (ARM64EC), FEX, and DXMT. It is sideloaded, gets JIT from StikDebug, and has a few playable games. Its design decisions to adopt:
 - **One process:** a single Mach process, with `wineserver` as a thread.
@@ -202,6 +202,12 @@ Made by the owner on 2026-09-27:
 - **Madeira:** take its design decisions, but do not build on its code or forks. It is a research prototype, far from complete.
 - **Translators:** FEX when the process has usable JIT, for Windows and Linux games. Box64's interpreter only when it does not, and only for 32-bit Windows games.
 - **No pre-translated signed route.** It is not needed while JIT installs have FEX and the no-JIT route has an interpreter.
+
+Recorded 2026-09-30 during split 02, from the owner's feedback:
+
+- **Identity.** Game data is keyed by a random game id. A location is matched to its game by, in order: the same drive and folder (so an in-place patch keeps the id); an exact content fingerprint (files alone identify a game only when 100% identical, saves excluded); then the engine's declared id. File-name similarity never matches or suggests. Prompts appear only on real ambiguity and never block; a mistake gives a duplicate entry, never shared saves. Full-file SHA-256 also serves diagnostics (the scanner's `--hash`, "Verify files").
+- **Game drives.** Games sit flat in game drives: the app's own `Documents/` (shown in Files as "On My iPad/Eikon" or "On My iPhone/Eikon"), plus user-added folders on USB or other local storage. Each game is an immediate subfolder of a drive, or sits inside one wrapper folder there. Import copies a game into a drive the user picks. Games on a USB drive run from the drive.
+- **Crash reports.** A game is identified by a report id (the first 8 characters of its random game id) and, in the issue the user reviews before submitting, its display name. Reports never carry file hashes, fingerprints or folder names.
 
 ## Known risks
 

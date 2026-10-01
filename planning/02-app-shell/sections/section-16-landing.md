@@ -239,3 +239,26 @@ Use original test content where possible. Where a real game from the share is us
 - `make scan-collection` output agrees with the "Games to support" table, after fixes or table corrections, and the opt-in collection pytest passes.
 - The `crash` label exists, and a prefilled crash issue was verified in Safari.
 - Every device check is recorded, by engine and hash only, in a filed device report.
+
+## As built (2026-09-30)
+
+**Done:**
+- **Requirements.**
+  - `requirements.md` records the identity, game-drive and crash-report decisions as notes from the owner's feedback during split 02.
+  - The "keyed by a hash of the main executable" sentence is gone.
+  - With the owner's approval, "game hash" became "game id" in Cloud saves, Privacy and Prior art, and in `project-manifest.md` (the split 02 row and the 03 interface row).
+- **Pipeline.** `make check`, `make test`, `make archive`, `make package` and `make verify` pass.
+  - The archived Info.plist has the three new keys: `UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace` and `EKRepositoryURL`.
+  - `make help` lists `test-core` and `scan-collection`.
+  - CI's macOS job runs `make test-core`.
+- **The `crash` label.** It was created on getBoolean/eikon with the owner's approval.
+- **Collection scan.** The scan found 37 top-level folders on the share, and 28 of them had no game found. The share isn't laid out as a game drive.
+  - **Owner decision:** no count reconciliation. Import copies a game into the right place, so nesting doesn't matter. The scanner is only for files managed by hand, so the drive layout is documented in `README.md` under "Game drives".
+  - The opt-in `tests/test_collection_scan.py` compares scan counts with the "Games to support" table. It therefore doesn't apply to this share and was not run.
+
+**Outstanding (needs the owner's devices or approval):**
+- The step 5 device checks, on the released artifacts.
+- The Safari prefill check of a crash issue (step 4.2). It doubles as the simulated-crash check.
+- Filing a device report with the results, by engine and hash only.
+- Cutting a release, and pushing these commits.
+- Closing out split 02 in `project-manifest.md` after those checks: the exFAT/FAT bookmark behavior, and whether issue-form prefill works.

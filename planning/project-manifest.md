@@ -26,7 +26,7 @@ Split 01 created the project and is done (2026-09-28, v0.2.3).
 | # | Split | Purpose | Ends with |
 |---|---|---|---|
 | 01 | build-packaging-jit | Build system, one build packaged two ways (deb, `.ipa` for AltStore and TrollStore), signing and entitlements, automatic JIT on Dopamine and TrollStore, JIT detection, license, credits pipeline, publishing to `eikon-source` | An empty app that installs on all three methods and reports whether it has JIT. **Done 2026-09-28.** |
-| 02 | app-shell | Game library, import, engine detection and hashing by main executable or archive, the route picker (with its reasons), per-game settings, the capability screen, the in-app credits | The library recognizes an engine and shows a route for original test content |
+| 02 | app-shell | Game library, import, engine detection, game identity (random game id, content fingerprint), the route picker (with its reasons), per-game settings, the capability screen, the in-app credits | The library recognizes an engine and shows a route for original test content |
 | 03 | native-kirikiri | An iOS port of Kirikiroid2 (xp3, KAG, audio, video), with a license audit, and a hand-off to Wine for games it can't run (`.tpm` plugins, encryption) | An original `.xp3` test game runs on a device |
 | 04 | input | A shared input layer: touch controls that act as mouse and keyboard, hardware keyboards, controllers, Japanese text entry | Input reaches native Kirikiri, and there's an interface ready for Wine and Linux |
 | 05 | fexcore-ios | FEXCore on Darwin/iOS: 16 KB pages, double-mapped JIT memory, a writable alias outside guest windows, Valve's config defaults, per-game settings keyed by hash, and the device gates (JIT, x18, guest window) | An x86 function returns 42 on a Mac and on a device, and each device's gates are recorded |
@@ -58,7 +58,7 @@ Split 01 created the project and is done (2026-09-28, v0.2.3).
 |---|---|---|
 | 01 | none | |
 | 02 | 01 | patterns: project layout, build, credits pipeline |
-| 03 | 02 | APIs: library entry, game hash, route interface |
+| 03 | 02 | APIs: library entry, game id, route interface |
 | 04 | 02, 03 | APIs: game session / render view. 03 is its first consumer |
 | 05 | 01 | APIs: JIT enablement and detection |
 | 06 | 05 | APIs: FEXCore library, JIT memory allocator, device gates |
