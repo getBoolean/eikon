@@ -66,5 +66,37 @@
 			<string>%d drives</string>
 		</dict>
 	</dict>
+	<key>identity.count.versions</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@versions@</string>
+		<key>versions</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d version known</string>
+			<key>other</key>
+			<string>%d versions known</string>
+		</dict>
+	</dict>
+	<key>game.remove.deleteFiles.message</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>The game folder you checked is deleted from its drive. This can’t be undone.</string>
+			<key>other</key>
+			<string>The %d game folders you checked are deleted from their drives. This can’t be undone.</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

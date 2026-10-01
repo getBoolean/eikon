@@ -12,6 +12,7 @@ struct RootView: View {
     @ObservedObject var services: AppServices
     @ObservedObject var jit: JITController
     @State private var selection: RootDestination? = .library
+    @State private var showUnreadable = false
 
     init(services: AppServices) {
         self.services = services
@@ -33,15 +34,24 @@ struct RootView: View {
             destination(.library)
         }
         .navigationViewStyle(.columns)
-        .alert(Text("storage.unreadable.title"), isPresented: Binding(
-            get: { !services.pendingUnreadable.isEmpty },
-            set: { _ in }
-        )) {
+        // Only after the first frame: on iOS 15 an alert presented in the frame the sidebar
+        // link activates can be dropped.
+        .task {
+            await Task.yield()
+            showUnreadable = !services.pendingUnreadable.isEmpty
+        }
+        .alert(Text("storage.unreadable.title"), isPresented: $showUnreadable) {
             Button("storage.unreadable.keep", role: .cancel) {
                 services.keepUnreadable()
             }
             Button("storage.unreadable.startOver", role: .destructive) {
                 services.startOverUnreadable()
+                // Files that couldn't be set aside are shown again once this alert has
+                // finished going away.
+                Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    showUnreadable = !services.pendingUnreadable.isEmpty
+                }
             }
         } message: {
             Text(unreadableMessage)
@@ -62,12 +72,12 @@ struct RootView: View {
         }
     }
 
-    /// Sections 13–15 replace the placeholders with LibraryView, DrivesView and CreditsView.
+    /// Section 15 replaces the Credits placeholder.
     @ViewBuilder
     private func destination(_ target: RootDestination) -> some View {
         switch target {
-        case .library: DestinationPlaceholder(titleKey: "library.title")
-        case .drives: DestinationPlaceholder(titleKey: "drives.title")
+        case .library: LibraryView(services: services)
+        case .drives: DrivesView(library: services.library)
         case .device: StatusView(controller: jit)
         case .credits: DestinationPlaceholder(titleKey: "credits.title")
         }

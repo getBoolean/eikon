@@ -1,8 +1,8 @@
 /* Eikon's English source strings. Keys are namespaced: status.*, install.*, jit.*, device.*,
    report.* (01); library.*, drives.*, import.*, identity.*, game.*, route.*, gate.*,
    engine.*, arch.*, crash.*, credits.*, developer.*, session.* (02); app.* for app-wide
-   startup text and storage.* for the unreadable-file warning. Core code returns codes and
-   enums only; App/Strings/ maps them to these keys. */
+   startup text and buttons, and storage.* for the unreadable-file warning. Core code
+   returns codes and enums only; App/Strings/ maps them to these keys. */
 
 "status.title" = "This device";
 
@@ -214,3 +214,120 @@
 "import.outcome.driveUnavailable" = "This drive isn't connected.";
 "import.outcome.cancelled" = "Import cancelled.";
 "import.outcome.failed" = "The import failed. Nothing was changed on the drive.";
+
+/* App-wide buttons */
+"app.cancel" = "Cancel";
+"app.ok" = "OK";
+
+/* Library screen */
+"library.otherDriveOnly" = "Only on another game drive";
+"library.empty.title" = "No games yet";
+"library.empty.builtIn" = "Games live in game drives. Put a game's folder in “%@” in the Files app.";
+"library.empty.drives" = "Or add a folder on a USB drive under Game drives.";
+"library.empty.import" = "Or tap Import to copy a game into a drive.";
+"library.unrecognized.title" = "Not recognized";
+"library.unrecognized.hint" = "Games must sit directly inside a game drive (one wrapper folder is fine).";
+
+/* Game screen */
+"game.section.game" = "Game";
+"game.section.locations" = "Locations";
+"game.section.crashes" = "Recent problems";
+"game.section.identity" = "Identity";
+"game.name.placeholder" = "Name";
+"game.engine" = "Engine";
+"game.engine.unityScripting" = "Scripting backend";
+"game.engine.version" = "Version";
+"game.engine.kirikiriFlavor" = "Flavor";
+"game.engine.plugins" = "Plugins";
+"game.engine.gameMakerBuild" = "Build type";
+"game.location.forget" = "Forget";
+"game.launch" = "Launch";
+"game.launch.planned" = "Not in this build yet.";
+"game.launch.noRoute" = "No route can run this game here. The reasons are below.";
+"game.launch.forced" = "The route you chose may not work here.";
+"game.launch.driveNotConnected" = "The drive with this game isn't connected.";
+"game.launch.missing" = "The game's folder is missing.";
+"game.launch.anyway.title" = "Launch anyway?";
+"game.launch.anyway.confirm" = "Launch";
+"game.launch.failed.title" = "The game couldn't start";
+"game.launch.failed" = "Something went wrong while starting the game.";
+"game.launch.failed.sessionActive" = "Another game is still running.";
+"game.gone" = "This game is no longer in the library.";
+"game.remove" = "Remove game…";
+"game.remove.title" = "Remove game";
+"game.remove.section.files" = "Delete game files";
+"game.remove.notConnected.footer" = "Files on drives that aren't connected can't be deleted.";
+"game.remove.data" = "Delete settings and saves (on all devices)";
+"game.remove.data.footer" = "Otherwise they stay, and come back if the game is added again.";
+"game.remove.reappears" = "This game will reappear while its folder is on a game drive.";
+"game.remove.confirm" = "Remove";
+"game.remove.deleteFiles.title" = "Delete game files?";
+"game.remove.deleteFiles.confirm" = "Delete";
+
+/* Identity tools */
+"identity.suggestion.several" = "This might be the same game as one of these (a different version). Use one entry?";
+"identity.merge.footer" = "This game's settings, saves and locations join the game you pick.";
+"identity.split.footer" = "The location you pick becomes a game of its own, starting with a copy of this game's settings.";
+"identity.reportID" = "Report ID";
+"identity.verify" = "Verify files";
+"identity.verify.again" = "Verify again";
+"identity.verify.hash" = "SHA-256 of the main data file";
+"identity.verify.failed" = "The file couldn't be read.";
+"identity.retry" = "Retry identifying “%@”";
+"identity.failure.unreadable" = "A file in this game couldn't be read.";
+"identity.failure.driveUnavailable" = "The drive couldn't be opened.";
+
+/* Route section */
+"route.section.chosen" = "Route";
+"route.section.candidates" = "All routes";
+"route.deciding" = "Checking routes…";
+"route.none" = "No route can run this game here.";
+"route.override.automatic" = "Automatic";
+"route.override.footer" = "Pick a route to force it, even one that can't run. Automatic picks the best one.";
+"route.override.warning" = "You chose a route that may not work:";
+"route.badge.override" = "Your choice";
+"route.badge.unavailable" = "Unavailable";
+
+/* Crash banner and history */
+"crash.banner.route" = "%1$@ · %2$@";
+"crash.tryAlternative" = "Try %@ next time";
+"crash.report" = "Report on GitHub";
+"crash.dismiss" = "Dismiss";
+"crash.clipboardNotice" = "The device report is on the clipboard. Paste it into the issue.";
+
+/* Game drives screen */
+"drives.builtIn.pad" = "On My iPad/Eikon";
+"drives.builtIn.phone" = "On My iPhone/Eikon";
+"drives.builtIn.footer" = "This folder is visible in the Files app.";
+"drives.section.other" = "Other drives";
+"drives.free" = "%@ free";
+"drives.add" = "Add game drive…";
+"drives.add.footer" = "Pick a folder on this device or a USB drive. Games in cloud-synced folders may be moved off the device, so avoid them.";
+"drives.relink" = "Find folder…";
+"drives.relink.confirm.title" = "Use this folder?";
+"drives.relink.confirm.message" = "None of this drive's games are in this folder.";
+"drives.relink.confirm.use" = "Use folder";
+"drives.remove" = "Remove drive";
+"drives.remove.title" = "Remove drive?";
+"drives.remove.message" = "Its games leave the library. The files on the drive and the games' settings stay.";
+"drives.remove.confirm" = "Remove";
+
+/* Import sheet */
+"import.button" = "Import game";
+"import.title" = "Import game";
+"import.choose" = "Choose game folder…";
+"import.choose.footer" = "The game's files are copied into a game drive. The original folder is not changed.";
+"import.chooseAnother" = "Choose another folder…";
+"import.chooseDrive" = "Choose another drive";
+"import.checking" = "Looking for a game…";
+"import.drive.header" = "Copy to";
+"import.size" = "Size: %@";
+"import.willCopy" = "The game's files will be copied to %@. The original folder is not changed.";
+"import.start" = "Import";
+"import.replace" = "Replace existing copy";
+"import.replace.footer" = "Replacing keeps the game's settings and saves: this is how an update is installed.";
+"import.rename" = "Import with another name…";
+"import.rename.placeholder" = "Folder name";
+"import.space.detail" = "The copy needs %1$@, and the drive has %2$@ free.";
+"import.progress" = "%1$@ of %2$@";
+"import.copying.footer" = "Keep Eikon open until the copy finishes.";

@@ -15,6 +15,13 @@ public struct DriveSummary: Sendable, Equatable, Identifiable {
     public var freeBytes: Int64?
     public var gameCount: Int
     public var id: UUID { drive.id }
+
+    public init(drive: GameDrive, state: DriveState, freeBytes: Int64?, gameCount: Int) {
+        self.drive = drive
+        self.state = state
+        self.freeBytes = freeBytes
+        self.gameCount = gameCount
+    }
 }
 
 /// A game's overall status, from its locations.
@@ -278,6 +285,19 @@ public final class LibraryController: ObservableObject {
         }
         let ids = Set(mine.map(\.id))
         context.index.update { $0.locations.removeAll { ids.contains($0.id) } }
+        refresh()
+    }
+
+    /// Drops a missing location from the index. Nothing on disk is touched; the folder, if
+    /// it comes back, is found again by the next scan.
+    public func forget(location: UUID) {
+        let removed = context.index.update { contents -> Bool in
+            let before = contents.locations.count
+            contents.locations.removeAll { $0.id == location && $0.identity == .missing }
+            return contents.locations.count != before
+        }
+        guard removed else { return }
+        worker.cancel([location])
         refresh()
     }
 

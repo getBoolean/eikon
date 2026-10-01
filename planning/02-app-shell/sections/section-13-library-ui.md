@@ -290,3 +290,40 @@ Shown at the top of `LibraryView` when `CrashReportController` publishes a banne
 - DEBUG previews render every row status, route verdict, route reason, banner outcome, drive state, import step and remove-dialog variant, and show no raw keys.
 - No display name, folder name or fingerprint value is logged or leaves the device through these views.
 - `make test` passes.
+
+## As built
+
+**Files.** These match the plan, with these additions:
+- `App/Strings/GameStrings.swift`: route badges, launch captions and failures, identity failures, the built-in drive's name, byte sizes.
+- The crash banner's view is `CrashBannerView`, because EikonKit already has a `CrashBanner` value type.
+
+**Controller additions (minimal).**
+- `LibraryController.forget(location:)` drops a *missing* location from the index. Nothing on disk is touched.
+- Public memberwise initializers on `DriveSummary` and `CrashBanner`, for previews.
+- No new tests. The owner's rule keeps tests few, and the build plus previews stand in for them.
+
+**Structure.** Each screen is a stateful wrapper over a pure `…Content` view, like 01's `StatusView`/`StatusContent`. Previews render the content views:
+- `LibraryContent`, `RouteSection`, `IdentitySuggestion`, `MergePicker`, `SplitPicker`, `CrashBannerView`
+- `ImportContent`, `RemoveGameContent`, `DrivesContent`
+- `EngineRows`, `LaunchButton` with every `LaunchState`, `CrashHistoryRow`
+
+Controllers come in through explicit init parameters (`LibraryView(services:)`, `DrivesView(library:)`), matching section 12.
+
+**Deviations.**
+- **Route override:** the candidate list is the picker. It shows *Automatic* plus a row per candidate, and `RoutePicker` lists every `RouteID`. Each row has its verdict and reasons inline and a checkmark on the stored override. It is not a `Picker`, because labels with several lines of reasons are unreliable inside one on iOS 15.
+- **Import progress:** shows "X of Y" bytes from the coordinator's fraction. No file count, because `ImportCoordinator` reports only a fraction. Success closes the sheet, so there is no "done" preview step.
+- **Folders still settling** (detected, no game id yet) are listed as rows without navigation, so a copy in progress is visible.
+- **Game detail:** sheets and alerts hang off the whole view, and each sheet keeps the game as it was when opened. A game that stops resolving therefore doesn't tear a flow down. After Remove, the detail pops from the sheet's `onDismiss`. A game that no longer resolves shows "This game is no longer in the library."
+- **Display name:** commits on Return and when the field loses focus, never per keystroke.
+- **Launch:**
+  - "Verify files" is enabled only when the launch location is reachable and has a key file.
+  - A missing launch location gets its own failure message.
+  - `LaunchState` checks that the route is built before it checks for a forced route that can't run. An unbuilt route has no runtime to start, so "Launch anyway" couldn't run it either.
+- **Unreadable-file warning:** shown from `.task { await Task.yield() … }`. After Start over, it is shown again about 0.5 s later, once the earlier alert is gone. On the iOS 26 simulator, a corrupted `gates.json` showed the warning at launch.
+
+**Code review fixes.**
+- `DrivesView`: whether the picker is showing and what it's for are kept in separate state. The alerts use `presenting:`.
+- `FileVerifier` ignores late progress from a finished or replaced run.
+- `forget` cancels fingerprinting only when it actually removes the location.
+
+**Verification:** `make test` passes, and the app launches on the simulator.

@@ -14,6 +14,17 @@ public struct CrashBanner: Identifiable, Equatable, Sendable {
     public var startedAt: Date
     /// Offered as "Try <route> next time" only when non-nil.
     public var alternative: RouteID?
+
+    public init(id: UUID, entry: CrashEntry, outcome: SessionOutcome, gameName: String?, route: String, startedAt: Date,
+                alternative: RouteID?) {
+        self.id = id
+        self.entry = entry
+        self.outcome = outcome
+        self.gameName = gameName
+        self.route = route
+        self.startedAt = startedAt
+        self.alternative = alternative
+    }
 }
 
 /// Turns the previous launch's unfinished session into a history entry and, when the
