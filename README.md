@@ -1,6 +1,8 @@
 # Eikon
 
-Eikon is the app. This is where it is developed.
+> **Discontinued in favor of [Madeira](https://github.com/willfaust/madeira).** Eikon is no longer being developed. Use Madeira for ongoing work.
+
+The documentation below describes the unfinished Eikon prototype and is retained for reference.
 
 From Greek *eikon*, a likeness: a Windows or Linux game, shown on iPhone or iPad. Said “AY-kon.”
 
